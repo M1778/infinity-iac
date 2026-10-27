@@ -7,7 +7,7 @@ plan-hash-bound apply, and structured JSON output.
 
 ## Quick start
 
-`sh
+```sh
 go build -o bin/infinity-iac ./cmd/infinity-iac
 INFINITY_IAC_CONFIG="$PWD/.infinity-iac/config.json" \
   ./bin/infinity-iac setup oracle --name default --profile DEFAULT --region local
@@ -15,7 +15,7 @@ INFINITY_IAC_CONFIG="$PWD/.infinity-iac/config.json" \
   ./bin/infinity-iac create server --name demo --provider oracle --yes
 INFINITY_IAC_CONFIG="$PWD/.infinity-iac/config.json" \
   ./bin/infinity-iac list instances --output json
-`
+```
 
 The current provider backend is a deterministic file provider for development
 and tests. It does not provision a real cloud instance yet; real Oracle, AWS,
@@ -23,13 +23,16 @@ and Google Cloud adapters are the next provider layer.
 
 ## Development
 
-`sh
+```sh
 make test
 make test-race
 make vet
 make fmt-check
 make build
-`
+```
+
+See [the command reference](docs/command-reference.md) for manifests,
+completion setup, lifecycle commands, and reserved product areas.
 
 GitHub Actions runs formatting, vet, race-enabled tests, and cross-platform
 builds on pushes and pull requests. Pushing a tag matching `v*.*.*` builds

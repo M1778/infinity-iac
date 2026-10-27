@@ -30,6 +30,9 @@ type App struct {
 
 func Run(args []string) int { return RunWithIO(args, os.Stdin, os.Stdout, os.Stderr) }
 func RunWithIO(args []string, in io.Reader, out, errOut io.Writer) int {
+	if len(args) > 0 && args[0] == "__complete" {
+		return complete(args[1:], out)
+	}
 	cfg, path, err := config.Load()
 	if err != nil {
 		fmt.Fprintf(errOut, "error: %v\n", err)
@@ -60,6 +63,8 @@ func RunWithIO(args []string, in io.Reader, out, errOut io.Writer) int {
 		return a.plan(args[1:], true)
 	case "install":
 		return a.install(args[1:])
+	case "completion":
+		return a.completion(args[1:])
 	default:
 		fmt.Fprintf(a.err, "error: unknown command %q\n", args[0])
 		return 2
@@ -67,11 +72,24 @@ func RunWithIO(args []string, in io.Reader, out, errOut io.Writer) int {
 }
 func (a *App) help() {
 	fmt.Fprintln(a.out, "Infinity-IaC: infrastructure lifecycle CLI")
-	fmt.Fprintln(a.out, "commands: setup, list, create, run, instance, plan, apply, install, doctor")
+	fmt.Fprintln(a.out, "commands: setup, list, create, run, instance, plan, apply, install, completion, doctor")
 	fmt.Fprintln(a.out, "examples:")
 	fmt.Fprintln(a.out, "  infinity-iac setup oracle --name default --profile DEFAULT --region us-phoenix-1")
 	fmt.Fprintln(a.out, "  infinity-iac create server --name demo --provider oracle --yes")
 	fmt.Fprintln(a.out, "  infinity-iac list instances --output json")
+}
+
+func (a *App) completion(args []string) int {
+	if len(args) != 1 {
+		fmt.Fprintln(a.out, "usage: completion bash|zsh|fish|powershell")
+		return 0
+	}
+	script, ok := completionScript(args[0])
+	if !ok {
+		return a.fail("supported shells: bash, zsh, fish, powershell")
+	}
+	fmt.Fprint(a.out, script)
+	return 0
 }
 
 func (a *App) setup(args []string) int {
