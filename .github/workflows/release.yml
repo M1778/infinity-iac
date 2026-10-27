@@ -51,6 +51,9 @@ jobs:
           ext=""
           if [ "$GOOS" = "windows" ]; then ext=".exe"; fi
           go build -trimpath -ldflags="-s -w" -o "dist/infinity-iac_$GOOS_$GOARCH${ext}" ./cmd/infinity-iac
+          if [ "$GOOS" = "windows" ]; then
+            sha256sum "dist/infinity-iac_$GOOS_$GOARCH${ext}" > "dist/infinity-iac_$GOOS_$GOARCH.sha256"
+          fi
 
       - name: Upload release binary
         uses: actions/upload-artifact@v7
@@ -60,9 +63,12 @@ jobs:
 
   publish:
     name: Publish GitHub release
-    needs: build
+    needs: [build, windows-installer]
     runs-on: ubuntu-latest
     steps:
+      - name: Check out installer sources
+        uses: actions/checkout@v4
+
       - name: Download release binaries
         uses: actions/download-artifact@v4
         with:
@@ -70,11 +76,67 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - name: Add Unix installer
+        shell: bash
+        run: cp install.sh dist/install.sh
+
+      - name: Make installer executable
+        shell: bash
+        run: chmod 0755 dist/install.sh
+
+      - name: Remove packaging-only checksums
+        shell: bash
+        run: rm -f dist/*.sha256
+
       - name: Create checksums
         working-directory: dist
         run: sha256sum * > SHA256SUMS
+
+      - name: Verify release artifacts
+        run: ./scripts/verify-release.sh dist
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "${GITHUB_REF_NAME}" dist/* --repo "${GITHUB_REPOSITORY}" --generate-notes --verify-tag
+
+  windows-installer:
+    name: Build Windows installer
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - name: Check out installer sources
+        uses: actions/checkout@v4
+
+      - name: Download Windows binary
+        uses: actions/download-artifact@v4
+        with:
+          name: release-windows-amd64
+          path: dist
+
+      - name: Verify Windows binary checksum
+        shell: pwsh
+        run: |
+          $binary = Get-ChildItem 'dist/infinity-iac_windows_amd64.exe'
+          $expected = (Get-Content 'dist/infinity-iac_windows_amd64.sha256').Split()[0].ToLowerInvariant()
+          $actual = (Get-FileHash $binary.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { throw "Windows binary checksum verification failed" }
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress --yes
+
+      - name: Build setup.exe
+        shell: pwsh
+        run: |
+          $version = ${env:GITHUB_REF_NAME}.TrimStart('v')
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) { $iscc = 'iscc.exe' }
+          & $iscc "/DAppVersion=$version" "/DSourceBinary=$((Resolve-Path 'dist/infinity-iac_windows_amd64.exe').Path)" installer/infinity-iac.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-installer
+          path: dist/infinity-iac-setup.exe

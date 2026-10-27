@@ -11,18 +11,26 @@ import (
 )
 
 const (
-	StatusRunning = "running"
-	StatusStopped = "stopped"
-	StatusDeleted = "deleted"
+	StatusRunning      = "running"
+	StatusStopped      = "stopped"
+	StatusDeleted      = "deleted"
+	StatusProvisioning = "provisioning"
 )
 
 type AccessProfile struct {
-	Name             string    `json:"name"`
-	Provider         string    `json:"provider"`
-	CredentialSource string    `json:"credential_source"`
-	Account          string    `json:"account,omitempty"`
-	Region           string    `json:"region,omitempty"`
-	ValidatedAt      time.Time `json:"validated_at,omitempty"`
+	Name               string    `json:"name"`
+	Provider           string    `json:"provider"`
+	CredentialSource   string    `json:"credential_source"`
+	ConfigPath         string    `json:"config_path,omitempty"`
+	CompartmentID      string    `json:"compartment_id,omitempty"`
+	SubnetID           string    `json:"subnet_id,omitempty"`
+	AvailabilityDomain string    `json:"availability_domain,omitempty"`
+	ImageID            string    `json:"image_id,omitempty"`
+	Shape              string    `json:"shape,omitempty"`
+	SSHPublicKey       string    `json:"ssh_public_key,omitempty"`
+	Account            string    `json:"account,omitempty"`
+	Region             string    `json:"region,omitempty"`
+	ValidatedAt        time.Time `json:"validated_at,omitempty"`
 }
 
 type ServerSpec struct {
@@ -60,9 +68,6 @@ func (s ServerSpec) ResolveDefaults(defaultProvider, defaultAccess, defaultRegio
 	}
 	if s.Region == "" {
 		s.Region = defaultRegion
-	}
-	if s.NetworkingScript == "" {
-		s.NetworkingScript = "iauto"
 	}
 	return s
 }

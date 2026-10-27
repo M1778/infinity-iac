@@ -33,7 +33,7 @@ jobs:
 
       - name: Check formatting
         shell: bash
-        run: test -z "$(gofmt -l .)"
+        run: test -z "$(gofmt -l ./cmd ./internal ./recipes)"
 
       - name: Vet
         run: go vet ./...
@@ -48,6 +48,20 @@ jobs:
           ext=""
           if [ "${{ runner.os }}" = "Windows" ]; then ext=".exe"; fi
           go build -trimpath -ldflags="-s -w" -o "dist/infinity-iac-${{ runner.os }}-${{ runner.arch }}${ext}" ./cmd/infinity-iac
+
+      - name: Validate recipe catalog
+        shell: bash
+        run: go run ./cmd/infinity-iac list recipes --output json
+
+      - name: Check Unix installer
+        shell: bash
+        run: |
+          sh -n install.sh
+          ./install.sh --help
+
+      - name: Check release verifier
+        shell: bash
+        run: sh -n scripts/verify-release.sh
 
       - name: Upload CI binary
         uses: actions/upload-artifact@v7

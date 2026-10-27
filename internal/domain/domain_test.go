@@ -10,7 +10,7 @@ func TestResolveDefaultsAndValidate(t *testing.T) {
 	if err := s.Validate(); err != nil {
 		t.Fatal(err)
 	}
-	if s.OS != "ubuntu-latest" || s.CPU != 1 || s.RAMGB != 1 || s.StorageGB != 20 || s.NetworkingScript != "iauto" {
+	if s.OS != "ubuntu-latest" || s.CPU != 1 || s.RAMGB != 1 || s.StorageGB != 20 || s.NetworkingScript != "" {
 		t.Fatalf("unexpected defaults: %+v", s)
 	}
 }

@@ -12,7 +12,6 @@ import (
 type File struct {
 	DefaultAccess string                 `json:"default_access,omitempty"`
 	Profiles      []domain.AccessProfile `json:"profiles,omitempty"`
-	StatePath     string                 `json:"state_path,omitempty"`
 }
 
 func Path() (string, error) {
@@ -90,13 +89,6 @@ func (f *File) UpsertProfile(p domain.AccessProfile) {
 	if f.DefaultAccess == "" {
 		f.DefaultAccess = p.Name
 	}
-}
-
-func (f File) EffectiveStatePath(configPath string) string {
-	if f.StatePath != "" {
-		return f.StatePath
-	}
-	return filepath.Join(filepath.Dir(configPath), "state.json")
 }
 
 func NewProfile(name, providerName, source, account, region string) domain.AccessProfile {
