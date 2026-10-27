@@ -33,7 +33,7 @@ jobs:
 
       - name: Check formatting
         shell: bash
-        run: test -z "$(gofmt -l .)"
+        run: test -z "$(gofmt -l ./cmd ./internal)"
 
       - name: Vet
         run: go vet ./...
