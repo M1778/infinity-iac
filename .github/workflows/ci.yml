@@ -50,7 +50,7 @@ jobs:
           go build -trimpath -ldflags="-s -w" -o "dist/infinity-iac-${{ runner.os }}-${{ runner.arch }}${ext}" ./cmd/infinity-iac
 
       - name: Upload CI binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ci-${{ runner.os }}-${{ runner.arch }}
           path: dist/*
