@@ -1,0 +1,45 @@
+api_version: recipe/v1
+name: n8n
+version: 1.0.0
+kind: application
+description: Self-hosted n8n workflow automation service.
+supports:
+  providers: [oracle]
+  os: [ubuntu-latest, ubuntu-24.04, ubuntu-22.04]
+  architectures: [amd64, arm64]
+inputs:
+  port:
+    type: integer
+    description: HTTP port for the n8n editor.
+    default: 5678
+    min: 1
+    max: 65535
+resources:
+  specs: ibase2
+  cpu: 2
+  ram_gb: 2
+  storage_gb: 35
+  ingress:
+    - port: 5678
+      protocol: tcp
+      source: public
+steps:
+  - id: install-docker
+    type: package
+    package: docker.io
+  - id: start-n8n
+    type: command
+    command: docker run -d --restart unless-stopped -p {{port}}:5678 --name n8n docker.n8n.io/n8nio/n8n
+health:
+  - type: http
+    port: 5678
+    path: /
+    timeout_seconds: 120
+outputs:
+  url:
+    type: string
+    value: http://${instance.public_ip}:5678
+  admin_password:
+    type: secret
+    value: generated
+    sensitive: true
