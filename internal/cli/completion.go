@@ -76,7 +76,7 @@ complete -F _infinity_iac_complete infinity-iac
 		return `# Infinity-IaC Zsh completion
 _infinity_iac() {
   local -a candidates
-  candidates=(${(f)"$(infinity-iac __complete -- -- ${words[@]})"})
+  candidates=(${(f)"$(infinity-iac __complete -- ${words[@]})"})
   _describe 'infinity-iac' candidates
 }
 compdef _infinity_iac infinity-iac
