@@ -8,6 +8,9 @@ import (
 type CreateRequest struct {
 	Spec           domain.ServerSpec
 	IdempotencyKey string
+	// UserData is cloud-init content. Providers that support instance
+	// bootstrap must encode it according to their API contract.
+	UserData string
 }
 
 type Filter struct{ Provider, Access, Region string }
