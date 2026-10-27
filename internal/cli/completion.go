@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-var topLevelCommands = []string{"setup", "list", "create", "run", "network", "instance", "sandbox", "wrap", "install", "plan", "apply", "import", "doctor", "completion", "help"}
+var topLevelCommands = []string{"setup", "list", "create", "run", "network", "instance", "sandbox", "wrap", "install", "plan", "apply", "import", "recipe", "validate", "doctor", "completion", "version", "help"}
 
 // complete is a shell-neutral protocol: one candidate per line. Shell
 // adapters do prefix filtering and turn these candidates into native menus.
@@ -30,15 +30,35 @@ func completionCandidates(words []string) []string {
 		return topLevelCommands
 	}
 	command := words[0]
+	if len(words) > 1 {
+		switch command {
+		case "list":
+			if words[1] == "recipes" || words[1] == "capabilities" {
+				return []string{"--root", "--output", "--output=json", "help"}
+			}
+		case "recipe":
+			if words[1] == "validate" {
+				return []string{"--file", "--output", "--output=json", "help"}
+			}
+		case "validate":
+			if words[1] == "recipe" {
+				return []string{"--file", "--output", "--output=json", "help"}
+			}
+		}
+	}
 	switch command {
 	case "setup":
 		return []string{"oracle", "backup", "help"}
 	case "list":
 		return []string{"acc", "access", "instances", "recipes", "capabilities", "help", "--output", "--output=json"}
+	case "recipe":
+		return []string{"list", "validate", "help"}
+	case "validate":
+		return []string{"recipe", "help"}
 	case "create":
 		return []string{"server", "sandbox", "network", "help"}
 	case "run":
-		return []string{"--app", "--script", "--specs", "--port", "--name", "--yes", "--output", "help"}
+		return []string{"--app", "--script", "--specs", "--port", "--name", "--startup-script", "--yes", "--output", "help"}
 	case "instance":
 		return []string{"stop", "restart", "delete", "help"}
 	case "network":
