@@ -1,0 +1,14 @@
+# Build output
+/bin/
+/dist/
+*.test
+
+# Local Infinity-IaC state and credentials
+config.json
+state.json
+.infinity-iac/
+
+# Editor and OS files
+.DS_Store
+.idea/
+.vscode/

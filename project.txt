@@ -1,0 +1,43 @@
+# Infinity-IaC (Infinity-InfrastructureAsCode Engine)
+
+repo: https://github.com/M1778/infinity-iac
+
+This engine has multiple functionality.
+
+The base usecase (showdown not complete): [note: running help after each command shows help for that command for example `infinity-iac run help` shows help for run and its options]
+`infinity-iac setup oracle` -> an interactive CLI to help you setup oracle for IaC access
+`infinity-iac list acc` -> lists accesses available like oracle,googlecloud,etc.
+`infinity-iac create server` -> [uses default access if oracle was set first it becomes default access]default VPS creation, prompts stuff like CPU size, etc.
+`infinity-iac create server --os ubuntu-latest --cpu 2 --ram 2GB --storage-type=auto --storage-size=200GB --provider=oracle --oracle-free-elligible-only --amount 2 --networking-script=iauto --startup-script=../startup.sh` -> creates two VPS with specified specs from the oracle provider with the custom flag "--oracle-free-elligible-only" and uses iauto (infinity-auto) for automatic networking which in this case knows how to create basic VCN for the VPS to get them public IP. if none of these flags were specified `infinity-iac create server` would prompt important information like specs and would use defaults for other flags like networking-script which is already set to iauto everytime for easy access
+`infinity-iac run --script={SCRIPT}` -> this is where infinity-iac shines the most powerful feature of infinity-iac is that it allows custom scripts or already existing scripts in its own core to be used to create instances for usecases super fast and efficient
+`infinity-iac run --script=windows-server --specs="2vcpu,4gbram,200gbssd"` -> this simple command creates a windows server and sets up basic networking and a ready2use windows server with the specs you can even expand this more
+`infinity-iac run --script=windows-server --specs=ibase2 --startup-script=./start.sh`
+`infinity-iac run --app=n8n --specs=auto --port=1080` -> as i said before this is where infinity-iac shines it can create and bring up applications so fast this command will install the best fit OS and configuration for n8n and it will install n8n and deal with all stuff like firewall and networking and in the end it will give you some stuff like URL, credentials and make your life easier (infinity-iac supports over 100 useful/famous applications) here the auto switch says pick your best recommendation for a n8n server specs
+`infinity-iac run --app=browser --specs=auto --port=1000` -> this brings up an instance with a browser hosting at port 1000 and definitely to access the browser it will require a password so it will print out a access password after creation of instance. infinity-iac core has over 200 useful scripts and applications that make life way easier and it even has an agent harness skill (compatible with claude code, codex, opencode) that allows those agents to learn infinity-iac and their applications and scripts so if user needs anything it will just invoke that skill and asks what they need
+`infinity-iac run --app=infinity-proxy --specs=minimal --port=1778 --name=PROXY1 && curl -x "http://${IIAC_PROXY1_HOST}:{IIAC_PROXY1_PORT} https://ip.wtf` -> this just shows how powerful can infinity be in more examples i show more of its power
+`infinity-iac list instances` -> lists running applications/scripts/servers
+`infinity-iac instance stop {instance_id}` -> stops an instance
+`infinity-iac instance delete {instance_id}` -> deletes an instance (this will stop that instance from billing your account since it deletes it)
+`infinity-iac instance restart {instance_id}` -> restarts the instance
+`infinity-iac instance delete --after=24h {instance_id}` -> deletes that instance after 24 hours
+`infinity-iac create sandbox --instance=new --sandbox-specs=minimal --duration=24h --backup=gdrive` -> infinity-iac is so powerful its capable of creating sandboxes inside instances and mostly is used for agents to experiment and stuff, --instance=new means create a new instance for this sandbox instead of passing an instance id. duration says this sandbox dies after 24h. the backup switch is another powerful tool of infinity-iac that allows you to use one of your backup applications to backup your stuff on especially useful for sandboxes. setting up backup applications is easy with `infinity-iac setup backup --provider=gdrive` we support the 10 most famous backup options
+`infinity-iac wrap --script=justrun --multi="ls -a && echo Hi from instance"` -> wrappers are scripts that wrap your command to a wrapper-script launching script operations on it they are super powerful. wrappers are temporary meaning after the process dies the server instance is automatically deleted
+`infinity-iac wrap --script=fastdl https://download.com/abigfile.zip` -> fastdl script downloads the file from link and then it downloads the same file from the temporary server making your download speed faster
+`infinity-iac wrap --script=proxy opencode` -> super useful wrapper running a proxy server instance and wrapping opencode to use that server as proxy allowing the user to use another IP or just a proxy server to wrap commands like curl or opencode or any other with that
+...
+
+
+specification levels:
+- minimal: 1 or less vcpu, 1gb or less ram, 20gb or less storage (depending on OS)
+- ibase: 1vcpu, 1gb ram, 30gb storage
+- ibase2: 2vcpu, 2gb ram, 35gb storage
+- ibase3: 2vcpu, 3gb ram, 35gb storage
+- ibase4: 2vcpu, 4gb ram, 40gb storage
+- ...ibaseseries
+- iheavy: 4vcpu, 10gb ram, 200gb storage
+- iheavy2: 6vcpu, 12gb ram, 500gb storage
+- ...iheavyseries
+- icompute: 4vcpu, 4gb ram, 70gb storage
+- icompute2: 6vcpu, 6gb ram, 100gb storage
+- icompute3: 8vcpu, 8gb ram, 120gb storage
+- ...icomputeseries
