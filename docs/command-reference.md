@@ -1,11 +1,24 @@
 # Infinity-IaC command reference
 
-This document is the maintained product reference. The executable currently
-implements the local provider slice described in **Available commands**. The
-later provider, network, sandbox, backup, and wrapper commands are reserved
-for the corresponding implementation layers.
+This document is the maintained product reference for Infinity-IaC 1.0.1.
+Compute lifecycle commands use the Oracle Cloud Infrastructure SDK and the
+selected OCI CLI profile. Network, sandbox, backup, and wrapper commands remain
+reserved until their production layers are implemented.
 
 ## Installation and shell completion
+
+### Release installers
+
+Unix users can install the latest tagged release directly from GitHub:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/M1778/infinity-iac/master/install.sh | sh
+```
+
+Set `INFINITY_IAC_PREFIX` or pass `--prefix` to choose the installation
+directory. The installer supports Linux and macOS on amd64 and arm64, and
+verifies the release checksum before writing the binary. Windows users can
+download `infinity-iac-setup.exe` from the GitHub Release page.
 
 Build the binary, place it on `PATH`, then generate the completion script for
 the shell in use:
@@ -39,15 +52,15 @@ nested prefixes such as `infinity-iac create s<Tab>` resolve to `server` and
 
 ### `setup oracle`
 
-Records an Oracle access profile without copying private credentials into
-Infinity-IaC configuration.
+Validates an OCI CLI profile and records the deployment identifiers required to
+provision instances. Private credentials stay in the OCI CLI configuration.
 
 ```sh
 infinity-iac setup oracle \
-  --name default \
-  --profile DEFAULT \
-  --account TENANCY_ID \
-  --region us-phoenix-1
+  --name default --profile DEFAULT --region us-phoenix-1 \
+  --compartment COMPARTMENT_OCID --subnet SUBNET_OCID \
+  --availability-domain PHX-AD-1 --image IMAGE_OCID \
+  --shape VM.Standard.E4.Flex --ssh-public-key "$(cat ~/.ssh/id_ed25519.pub)"
 ```
 
 ### `list acc`
@@ -60,7 +73,9 @@ infinity-iac list acc --output json
 
 ### `create server`
 
-Creates one or more instances through the configured local provider backend.
+Creates one or more OCI instances through the configured production provider.
+The selected image OCID is used for the instance OS; `--startup-script` is
+encoded as OCI cloud-init user data and runs on first boot.
 Billable or destructive operations require `--yes` in noninteractive use.
 
 ```sh
@@ -75,8 +90,11 @@ infinity-iac create server \
   --yes
 ```
 
-Defaults are Ubuntu latest, 1 vCPU, 1 GB RAM, 20 GB storage, and the `iauto`
-networking recipe marker.
+Defaults are Ubuntu latest, 1 vCPU, 1 GB RAM, and 20 GB requested storage.
+OCI boot volumes are allocated at the provider minimum of 50 GB when a lower
+size is requested.
+Networking recipe execution is rejected until a real OCI networking layer is
+available.
 
 ### `list instances`
 
@@ -85,6 +103,28 @@ Lists owned, non-deleted instances.
 ```sh
 infinity-iac list instances --output json
 ```
+
+### `list recipes`
+
+Lists the validated built-in recipe catalog. Set `INFINITY_IAC_RECIPES` or use
+`--root` to inspect a filesystem catalog during development.
+
+```sh
+infinity-iac list recipes
+infinity-iac list recipes --root ./recipes --output json
+```
+
+### `validate recipe`
+
+Validates one YAML or JSON recipe against `recipe/v1` without executing steps.
+
+```sh
+infinity-iac validate recipe --file recipes/n8n/recipe.yaml
+```
+
+`recipe list` is an alias for `list recipes`, and `recipe validate` is an alias
+for this command. `list capabilities` reports the provider, operating system,
+and architecture metadata from the same catalog.
 
 ### `instance stop|restart|delete`
 
@@ -98,13 +138,15 @@ infinity-iac instance delete demo --yes
 
 ### `run`
 
-The current slice accepts `--app` or `--script` and provisions a shared server
-record. Application recipe execution and readiness checks are planned for the
-recipe engine.
+Application and script names are resolved against the validated recipe catalog;
+unknown recipes fail before creating anything. Validated recipe steps are sent
+to OCI as base64 encoded cloud-init user data and run on first boot. The
+`{{port}}` recipe token is replaced with the selected host port.
+The command returns after the OCI launch request; cloud-init continues on the
+instance.
 
 ```sh
-infinity-iac run --app n8n --specs auto --port 1080 --yes
-infinity-iac run --script windows-server --specs auto --yes
+infinity-iac run --app n8n --specs auto --port 1080 --startup-script ./start.sh --yes
 ```
 
 ### `plan` and `apply`
@@ -131,7 +173,7 @@ infinity-iac apply --file infrastructure.yaml \
 
 ### `doctor`
 
-Reports configuration, local state, and provider backend information.
+Reports configuration, profile count, release version, and selected provider.
 
 ```sh
 infinity-iac doctor --output json

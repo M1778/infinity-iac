@@ -3,6 +3,7 @@ package cli
 import (
 	"bufio"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -18,6 +19,8 @@ import (
 	"github.com/M1778/infinity-iac/internal/config"
 	"github.com/M1778/infinity-iac/internal/domain"
 	"github.com/M1778/infinity-iac/internal/provider"
+	"github.com/M1778/infinity-iac/internal/recipe"
+	builtinrecipes "github.com/M1778/infinity-iac/recipes"
 )
 
 type App struct {
@@ -25,8 +28,10 @@ type App struct {
 	out, err   io.Writer
 	cfg        config.File
 	configPath string
-	p          *provider.FileProvider
+	p          provider.Provider
 }
+
+const Version = "1.0.1"
 
 func Run(args []string) int { return RunWithIO(args, os.Stdin, os.Stdout, os.Stderr) }
 func RunWithIO(args []string, in io.Reader, out, errOut io.Writer) int {
@@ -39,7 +44,10 @@ func RunWithIO(args []string, in io.Reader, out, errOut io.Writer) int {
 		return 1
 	}
 	a := &App{in: in, out: out, err: errOut, cfg: cfg, configPath: path}
-	a.p = provider.NewFileProvider(cfg.EffectiveStatePath(path))
+	if len(args) > 0 && (args[0] == "version" || args[0] == "--version") {
+		fmt.Fprintln(out, Version)
+		return 0
+	}
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" {
 		a.help()
 		return 0
@@ -49,6 +57,10 @@ func RunWithIO(args []string, in io.Reader, out, errOut io.Writer) int {
 		return a.setup(args[1:])
 	case "list":
 		return a.list(args[1:])
+	case "recipe":
+		return a.recipe(args[1:])
+	case "validate":
+		return a.validate(args[1:])
 	case "create":
 		return a.create(args[1:])
 	case "run":
@@ -72,9 +84,9 @@ func RunWithIO(args []string, in io.Reader, out, errOut io.Writer) int {
 }
 func (a *App) help() {
 	fmt.Fprintln(a.out, "Infinity-IaC: infrastructure lifecycle CLI")
-	fmt.Fprintln(a.out, "commands: setup, list, create, run, instance, plan, apply, install, completion, doctor")
+	fmt.Fprintln(a.out, "commands: setup, list, create, run, instance, plan, apply, install, recipe, validate, completion, doctor")
 	fmt.Fprintln(a.out, "examples:")
-	fmt.Fprintln(a.out, "  infinity-iac setup oracle --name default --profile DEFAULT --region us-phoenix-1")
+	fmt.Fprintln(a.out, "  infinity-iac setup oracle --name default --profile DEFAULT --region us-phoenix-1 --compartment OCID --subnet OCID --availability-domain AD --image OCID --shape SHAPE")
 	fmt.Fprintln(a.out, "  infinity-iac create server --name demo --provider oracle --yes")
 	fmt.Fprintln(a.out, "  infinity-iac list instances --output json")
 }
@@ -94,7 +106,7 @@ func (a *App) completion(args []string) int {
 
 func (a *App) setup(args []string) int {
 	if len(args) == 0 || args[0] == "help" {
-		fmt.Fprintln(a.out, "usage: setup oracle [--name NAME] [--profile PROFILE] [--account ACCOUNT] [--region REGION]")
+		fmt.Fprintln(a.out, "usage: setup oracle --compartment OCID --subnet OCID --availability-domain AD --image OCID --shape SHAPE [--name NAME] [--profile PROFILE] [--region REGION] [--config PATH] [--ssh-public-key KEY]")
 		return 0
 	}
 	if args[0] != "oracle" {
@@ -106,6 +118,13 @@ func (a *App) setup(args []string) int {
 	profile := fs.String("profile", "DEFAULT", "provider credential profile")
 	account := fs.String("account", "", "account or tenancy identifier")
 	region := fs.String("region", "", "default region")
+	configFile := fs.String("config", "", "OCI config file path")
+	compartment := fs.String("compartment", "", "OCI compartment OCID")
+	subnet := fs.String("subnet", "", "OCI subnet OCID")
+	availabilityDomain := fs.String("availability-domain", "", "OCI availability domain")
+	image := fs.String("image", "", "OCI image OCID")
+	shape := fs.String("shape", "", "OCI compute shape")
+	sshKey := fs.String("ssh-public-key", "", "SSH public key")
 	if err := fs.Parse(args[1:]); err != nil {
 		return 2
 	}
@@ -116,17 +135,73 @@ func (a *App) setup(args []string) int {
 		*region = os.Getenv("OCI_REGION")
 	}
 	if *region == "" {
-		*region = "local"
+		return a.fail("--region is required")
 	}
 	if *profile == "" {
 		*profile = "DEFAULT"
 	}
 	p := config.NewProfile(*name, "oracle", "oci-profile:"+*profile, *account, *region)
+	p.ConfigPath = *configFile
+	p.CompartmentID = *compartment
+	p.SubnetID = *subnet
+	p.AvailabilityDomain = *availabilityDomain
+	p.ImageID = *image
+	p.Shape = *shape
+	p.SSHPublicKey = *sshKey
+	if err := validateAccessProfile(p); err != nil {
+		return a.fail(err.Error())
+	}
+	backend, err := provider.NewOCIProvider(p)
+	if err != nil {
+		return a.fail("validate OCI credentials: " + err.Error())
+	}
+	checkCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	if _, err := backend.ListInstances(checkCtx, provider.Filter{}); err != nil {
+		return a.fail("validate OCI access: " + err.Error())
+	}
+	p.ValidatedAt = time.Now().UTC()
 	a.cfg.UpsertProfile(p)
 	if err := config.Save(a.configPath, a.cfg); err != nil {
 		return a.fail("save config: " + err.Error())
 	}
-	return a.emit(map[string]any{"profile": p, "config": a.configPath, "validation": "credential source recorded; live provider validation is unavailable in the local adapter"}, func() { fmt.Fprintf(a.out, "configured access %q for oracle (%s)\n", p.Name, p.CredentialSource) })
+	return a.emit(map[string]any{"profile": p, "config": a.configPath, "validation": "OCI configuration validated"}, func() { fmt.Fprintf(a.out, "configured OCI access %q (%s)\n", p.Name, p.CredentialSource) })
+}
+
+func validateAccessProfile(p domain.AccessProfile) error {
+	if p.CompartmentID == "" || p.SubnetID == "" || p.AvailabilityDomain == "" || p.ImageID == "" || p.Shape == "" {
+		return errors.New("--compartment, --subnet, --availability-domain, --image, and --shape are required")
+	}
+	return nil
+}
+
+func (a *App) provider() (provider.Provider, error) {
+	if a.p != nil {
+		return a.p, nil
+	}
+	profile, ok := a.cfg.DefaultProfile()
+	if !ok {
+		return nil, errors.New("no access profile configured; run setup oracle")
+	}
+	p, err := a.providerForProfile(profile)
+	if err != nil {
+		return nil, err
+	}
+	a.p = p
+	return p, nil
+}
+
+func (a *App) providerForProfile(profile domain.AccessProfile) (provider.Provider, error) {
+	switch profile.Provider {
+	case "oracle", "oci":
+		p, err := provider.NewOCIProvider(profile)
+		if err != nil {
+			return nil, err
+		}
+		return p, nil
+	default:
+		return nil, fmt.Errorf("unsupported provider %q", profile.Provider)
+	}
 }
 
 func (a *App) list(args []string) int {
@@ -139,9 +214,161 @@ func (a *App) list(args []string) int {
 		return a.listAccess(args[1:])
 	case "instances":
 		return a.listInstances(args[1:])
+	case "recipes":
+		return a.listRecipes(args[1:])
+	case "capabilities":
+		return a.listCapabilities(args[1:])
 	default:
 		return a.fail("unknown list target " + args[0])
 	}
+}
+
+type recipeSummary struct {
+	Name        string `json:"name"`
+	Version     string `json:"version"`
+	Kind        string `json:"kind"`
+	Description string `json:"description,omitempty"`
+}
+
+func (a *App) listRecipes(args []string) int {
+	mode, err := outputMode(args)
+	if err != nil {
+		return a.fail(err.Error())
+	}
+	root := recipeRoot(args)
+	items, source, err := loadRecipes(root)
+	if err != nil {
+		return a.fail(err.Error())
+	}
+	summaries := make([]recipeSummary, 0, len(items))
+	for _, item := range items {
+		summaries = append(summaries, recipeSummary{Name: item.Name, Version: item.Version, Kind: item.Kind, Description: item.Description})
+	}
+	if mode == "json" {
+		return a.emit(map[string]any{"source": source, "recipes": summaries}, nil)
+	}
+	if len(summaries) == 0 {
+		fmt.Fprintln(a.out, "no recipes")
+		return 0
+	}
+	fmt.Fprintln(a.out, "NAME\tVERSION\tKIND\tDESCRIPTION")
+	for _, item := range summaries {
+		fmt.Fprintf(a.out, "%s\t%s\t%s\t%s\n", item.Name, item.Version, item.Kind, item.Description)
+	}
+	return 0
+}
+
+func (a *App) listCapabilities(args []string) int {
+	root := recipeRoot(args)
+	items, source, err := loadRecipes(root)
+	if err != nil {
+		return a.fail(err.Error())
+	}
+	capabilities := make([]map[string]any, 0, len(items))
+	for _, item := range items {
+		capabilities = append(capabilities, map[string]any{"name": item.Name, "kind": item.Kind, "providers": item.Supports.Providers, "os": item.Supports.OS, "architectures": item.Supports.Architectures})
+	}
+	mode, err := outputMode(args)
+	if err != nil {
+		return a.fail(err.Error())
+	}
+	if mode == "json" {
+		return a.emit(map[string]any{"source": source, "capabilities": capabilities}, nil)
+	}
+	for _, item := range capabilities {
+		fmt.Fprintf(a.out, "%s\t%s\n", item["name"], item["kind"])
+	}
+	return 0
+}
+
+func (a *App) recipe(args []string) int {
+	if len(args) == 0 || args[0] == "help" {
+		fmt.Fprintln(a.out, "usage: recipe list|validate ...")
+		return 0
+	}
+	switch args[0] {
+	case "list":
+		return a.listRecipes(args[1:])
+	case "validate":
+		return a.validateRecipe(args[1:])
+	default:
+		return a.fail("unknown recipe action " + args[0])
+	}
+}
+
+func (a *App) validate(args []string) int {
+	if len(args) == 0 || args[0] == "help" {
+		fmt.Fprintln(a.out, "usage: validate recipe --file PATH")
+		return 0
+	}
+	if args[0] != "recipe" {
+		return a.fail("unknown validation target " + args[0])
+	}
+	return a.validateRecipe(args[1:])
+}
+
+func (a *App) validateRecipe(args []string) int {
+	fs := flag.NewFlagSet("validate recipe", flag.ContinueOnError)
+	fs.SetOutput(a.err)
+	file := fs.String("file", "", "recipe YAML or JSON file")
+	mode := fs.String("output", "table", "table or json")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if *file == "" {
+		return a.fail("--file is required")
+	}
+	item, err := recipe.Load(*file)
+	if err != nil {
+		return a.fail(err.Error())
+	}
+	if *mode == "json" {
+		return a.emit(map[string]any{"valid": true, "name": item.Name, "version": item.Version, "kind": item.Kind, "file": *file}, nil)
+	}
+	fmt.Fprintf(a.out, "valid recipe %s %s (%s)\n", item.Name, item.Version, item.Kind)
+	return 0
+}
+
+func loadRecipes(root string) ([]recipe.Recipe, string, error) {
+	var (
+		items  []recipe.Recipe
+		source string
+		err    error
+	)
+	switch {
+	case root != "":
+		source = root
+		items, err = recipe.Discover(source)
+	case os.Getenv("INFINITY_IAC_RECIPES") != "":
+		source = os.Getenv("INFINITY_IAC_RECIPES")
+		items, err = recipe.Discover(source)
+	case func() bool { _, statErr := os.Stat("recipes"); return statErr == nil }():
+		source = "recipes"
+		items, err = recipe.Discover(source)
+	default:
+		source = "builtin"
+		items, err = recipe.DiscoverFS(builtinrecipes.FS)
+	}
+	if err != nil {
+		return nil, source, err
+	}
+	catalog, err := recipe.NewCatalog(items)
+	if err != nil {
+		return nil, source, err
+	}
+	return catalog.List(), source, nil
+}
+
+func recipeRoot(args []string) string {
+	for i, arg := range args {
+		if arg == "--root" && i+1 < len(args) {
+			return args[i+1]
+		}
+		if strings.HasPrefix(arg, "--root=") {
+			return strings.TrimPrefix(arg, "--root=")
+		}
+	}
+	return ""
 }
 func (a *App) listAccess(args []string) int {
 	mode, err := outputMode(args)
@@ -170,7 +397,11 @@ func (a *App) listInstances(args []string) int {
 	if err != nil {
 		return a.fail(err.Error())
 	}
-	items, err := a.p.ListInstances(context.Background(), provider.Filter{})
+	p, err := a.provider()
+	if err != nil {
+		return a.fail(err.Error())
+	}
+	items, err := p.ListInstances(context.Background(), provider.Filter{})
 	if err != nil {
 		return a.fail(err.Error())
 	}
@@ -198,7 +429,7 @@ func (a *App) create(args []string) int {
 	}
 	return a.createServer(args[1:], "server")
 }
-func (a *App) createServer(args []string, kind string) int {
+func (a *App) createServer(args []string, kind string, userData ...string) int {
 	if len(args) > 0 && args[0] == "help" {
 		fmt.Fprintln(a.out, "usage: create server [--name NAME] [--provider PROVIDER] [--cpu N] [--ram NGB] [--storage-size NGB] [--amount N] [--yes]")
 		return 0
@@ -225,9 +456,22 @@ func (a *App) createServer(args []string, kind string) int {
 	if *amount < 1 {
 		return a.fail("amount must be at least 1")
 	}
+	if strings.TrimSpace(*networking) != "" {
+		return a.fail("--networking-script is not supported by the OCI provider in this release")
+	}
 	profile, ok := a.cfg.DefaultProfile()
-	if !ok && (*providerName == "" || *access == "") {
-		return a.fail("no access profile configured; run setup oracle or pass --provider and --access")
+	if *access != "" {
+		profile, ok = a.cfg.Profile(*access)
+	}
+	if !ok {
+		return a.fail("no access profile configured; run setup oracle")
+	}
+	if *providerName != "" && *providerName != profile.Provider {
+		return a.fail(fmt.Sprintf("provider %q does not match access profile %q", *providerName, profile.Name))
+	}
+	p, err := a.providerForProfile(profile)
+	if err != nil {
+		return a.fail(err.Error())
 	}
 	if *providerName == "" {
 		*providerName = profile.Provider
@@ -266,7 +510,21 @@ func (a *App) createServer(args []string, kind string) int {
 		if err := spec.Validate(); err != nil {
 			return a.fail(err.Error())
 		}
-		i, err := a.p.CreateInstance(context.Background(), provider.CreateRequest{Spec: spec, IdempotencyKey: "create-" + nme})
+		bootstrap := ""
+		if len(userData) > 0 {
+			bootstrap = userData[0]
+		}
+		if *startup != "" {
+			script, readErr := os.ReadFile(*startup)
+			if readErr != nil {
+				return a.fail("read startup script: " + readErr.Error())
+			}
+			if bootstrap != "" {
+				bootstrap += "\n"
+			}
+			bootstrap += string(script)
+		}
+		i, err := p.CreateInstance(context.Background(), provider.CreateRequest{Spec: spec, IdempotencyKey: "create-" + nme, UserData: bootstrap})
 		if err != nil {
 			return a.fail(err.Error())
 		}
@@ -283,7 +541,7 @@ func (a *App) createServer(args []string, kind string) int {
 
 func (a *App) run(args []string) int {
 	if len(args) == 0 || args[0] == "help" {
-		fmt.Fprintln(a.out, "usage: run --app NAME [--specs auto] [--port N] [--yes]")
+		fmt.Fprintln(a.out, "usage: run --app NAME [--specs auto] [--port N] [--startup-script PATH] [--yes]")
 		return 0
 	}
 	fs := flag.NewFlagSet("run", flag.ContinueOnError)
@@ -293,6 +551,7 @@ func (a *App) run(args []string) int {
 	specs := fs.String("specs", "auto", "specification preset")
 	port := fs.Int("port", 0, "application port")
 	name := fs.String("name", "", "instance name")
+	startup := fs.String("startup-script", "", "additional startup script path")
 	yes := fs.Bool("yes", false, "confirm")
 	mode := fs.String("output", "table", "table or json")
 	if err := fs.Parse(args); err != nil {
@@ -311,8 +570,131 @@ func (a *App) run(args []string) int {
 	if *specs != "" && *specs != "auto" {
 		return a.fail("only specs=auto is supported in this release")
 	}
-	_ = *port
-	return a.createServer([]string{"--name", *name, "--port", strconv.Itoa(*port), "--yes=" + strconv.FormatBool(*yes), "--output", *mode}, "run-"+target)
+	item, ok := findRecipe(target)
+	if ok {
+		if *port == 0 {
+			*port = recipePort(item)
+		}
+	} else {
+		return a.fail(fmt.Sprintf("recipe %q was not found; use list recipes", target))
+	}
+	cpu, ram, storage := recipeResources(item)
+	bootstrap, err := recipeCloudInit(item, *port)
+	if err != nil {
+		return a.fail("prepare recipe: " + err.Error())
+	}
+	createArgs := []string{"--name", *name, "--cpu", strconv.Itoa(cpu), "--ram", strconv.Itoa(ram) + "GB", "--storage-size", strconv.Itoa(storage) + "GB", "--port", strconv.Itoa(*port), "--yes=" + strconv.FormatBool(*yes), "--output", *mode}
+	if *startup != "" {
+		createArgs = append(createArgs, "--startup-script", *startup)
+	}
+	return a.createServer(createArgs, "run-"+target, bootstrap)
+}
+
+func findRecipe(name string) (recipe.Recipe, bool) {
+	items, _, err := loadRecipes("")
+	if err != nil {
+		return recipe.Recipe{}, false
+	}
+	for _, item := range items {
+		if item.Name == name {
+			return item, true
+		}
+	}
+	return recipe.Recipe{}, false
+}
+
+func recipePort(item recipe.Recipe) int {
+	if in, ok := item.Inputs["port"]; ok {
+		if value, ok := in.Default.(int); ok {
+			return value
+		}
+		if value, ok := in.Default.(int64); ok {
+			return int(value)
+		}
+		if value, ok := in.Default.(float64); ok {
+			return int(value)
+		}
+	}
+	if len(item.Resources.Ingress) > 0 {
+		return item.Resources.Ingress[0].Port
+	}
+	return 0
+}
+
+func recipeResources(item recipe.Recipe) (cpu, ram, storage int) {
+	cpu, ram, storage = item.Resources.CPU, item.Resources.RAMGB, item.Resources.StorageGB
+	if cpu < 1 {
+		cpu = 1
+	}
+	if ram < 1 {
+		ram = 1
+	}
+	if storage < 1 {
+		storage = 20
+	}
+	return cpu, ram, storage
+}
+
+// recipeCloudInit turns validated recipe steps into a real cloud-init shell
+// script. The script is sent as OCI user_data and runs on first boot.
+func recipeCloudInit(item recipe.Recipe, port int) (string, error) {
+	var b strings.Builder
+	b.WriteString("#!/bin/bash\nset -eu\n")
+	for _, step := range item.Steps {
+		switch step.Type {
+		case "package":
+			if strings.TrimSpace(step.Package) == "" {
+				return "", fmt.Errorf("step %q has an empty package", step.ID)
+			}
+			b.WriteString("export DEBIAN_FRONTEND=noninteractive\napt-get update\napt-get install -y -- " + shellQuote(step.Package) + "\n")
+		case "command":
+			command := strings.ReplaceAll(step.Command, "{{port}}", strconv.Itoa(port))
+			b.WriteString(command)
+			b.WriteByte('\n')
+		case "upload":
+			data, err := os.ReadFile(step.Source)
+			if err != nil {
+				return "", fmt.Errorf("read upload source %q for step %q: %w", step.Source, step.ID, err)
+			}
+			b.WriteString("install -d -- " + shellQuote(filepath.Dir(step.Destination)) + "\n")
+			b.WriteString("echo " + shellQuote(base64.StdEncoding.EncodeToString(data)) + " | base64 -d > " + shellQuote(step.Destination) + "\n")
+		default:
+			return "", fmt.Errorf("step %q has unsupported type %q", step.ID, step.Type)
+		}
+	}
+	for _, check := range item.Health {
+		switch check.Type {
+		case "command":
+			b.WriteString(strings.ReplaceAll(check.Command, "{{port}}", strconv.Itoa(port)))
+			b.WriteByte('\n')
+		case "http":
+			path := check.Path
+			if !strings.HasPrefix(path, "/") {
+				path = "/" + path
+			}
+			b.WriteString("command -v curl >/dev/null 2>&1 || (apt-get update && apt-get install -y -- curl)\n")
+			healthPort := check.Port
+			if port > 0 {
+				healthPort = port
+			}
+			url := "http://127.0.0.1:" + strconv.Itoa(healthPort) + path
+			b.WriteString("curl --fail --silent --show-error --retry 10 --retry-delay 5 --max-time " + strconv.Itoa(maxHealthTimeout(check.TimeoutSeconds)) + " " + shellQuote(url) + " >/dev/null\n")
+		default:
+			return "", fmt.Errorf("health check has unsupported type %q", check.Type)
+		}
+	}
+	return b.String(), nil
+}
+
+func maxHealthTimeout(value int) int {
+	if value < 1 {
+		return 120
+	}
+	return value
+}
+
+func shellQuote(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'"
 }
 
 func (a *App) instance(args []string) int {
@@ -350,7 +732,11 @@ func (a *App) instance(args []string) int {
 	if fs.NArg() != 1 {
 		return a.fail("instance ID or name is required")
 	}
-	id, err := a.resolveInstance(fs.Arg(0))
+	p, err := a.provider()
+	if err != nil {
+		return a.fail(err.Error())
+	}
+	id, err := a.resolveInstance(p, fs.Arg(0))
 	if err != nil {
 		return a.fail(err.Error())
 	}
@@ -361,7 +747,7 @@ func (a *App) instance(args []string) int {
 		if !*yes && !a.confirm("delete instance "+id) {
 			return 1
 		}
-		err = a.p.DeleteInstance(context.Background(), id)
+		err = p.DeleteInstance(context.Background(), id)
 		if err != nil {
 			return a.fail(err.Error())
 		}
@@ -373,9 +759,9 @@ func (a *App) instance(args []string) int {
 	}
 	var item domain.Instance
 	if action == "stop" {
-		item, err = a.p.StopInstance(context.Background(), id)
+		item, err = p.StopInstance(context.Background(), id)
 	} else {
-		item, err = a.p.RestartInstance(context.Background(), id)
+		item, err = p.RestartInstance(context.Background(), id)
 	}
 	if err != nil {
 		return a.fail(err.Error())
@@ -386,8 +772,8 @@ func (a *App) instance(args []string) int {
 	fmt.Fprintf(a.out, "%s %s (%s)\n", action, item.Name, item.Status)
 	return 0
 }
-func (a *App) resolveInstance(value string) (string, error) {
-	items, err := a.p.ListInstances(context.Background(), provider.Filter{})
+func (a *App) resolveInstance(p provider.Provider, value string) (string, error) {
+	items, err := p.ListInstances(context.Background(), provider.Filter{})
 	if err != nil {
 		return "", err
 	}
@@ -403,11 +789,15 @@ func (a *App) doctor(args []string) int {
 	if err != nil {
 		return a.fail(err.Error())
 	}
-	result := map[string]any{"config": a.configPath, "profiles": len(a.cfg.Profiles), "provider": "local", "state": a.cfg.EffectiveStatePath(a.configPath), "oracle_adapter": "not configured in local vertical slice"}
+	providerName := ""
+	if profile, ok := a.cfg.DefaultProfile(); ok {
+		providerName = profile.Provider
+	}
+	result := map[string]any{"version": Version, "config": a.configPath, "profiles": len(a.cfg.Profiles), "provider": providerName}
 	if mode == "json" {
 		return a.emit(result, nil)
 	}
-	fmt.Fprintf(a.out, "config: %s\nprofiles: %d\nstate: %s\nprovider: local\n", result["config"], result["profiles"], result["state"])
+	fmt.Fprintf(a.out, "version: %s\nconfig: %s\nprofiles: %d\nprovider: %s\n", result["version"], result["config"], result["profiles"], result["provider"])
 	return 0
 }
 
@@ -441,20 +831,24 @@ func (a *App) plan(args []string, apply bool) int {
 			m.Servers[i] = m.Servers[i].ResolveDefaults(profile.Provider, profile.Name, profile.Region)
 		}
 	}
-	existing, err := a.p.ListInstances(context.Background(), provider.Filter{})
+	backend, err := a.provider()
 	if err != nil {
 		return a.fail(err.Error())
 	}
-	p, err := domain.NewPlan(m, existing, time.Now().UTC())
+	existing, err := backend.ListInstances(context.Background(), provider.Filter{})
+	if err != nil {
+		return a.fail(err.Error())
+	}
+	plan, err := domain.NewPlan(m, existing, time.Now().UTC())
 	if err != nil {
 		return a.fail(err.Error())
 	}
 	if !apply {
 		if *mode == "json" {
-			return a.emit(p, nil)
+			return a.emit(plan, nil)
 		}
-		fmt.Fprintf(a.out, "plan %s: %d action(s)\n", p.ID, len(p.Actions))
-		for _, action := range p.Actions {
+		fmt.Fprintf(a.out, "plan %s: %d action(s)\n", plan.ID, len(plan.Actions))
+		for _, action := range plan.Actions {
 			fmt.Fprintf(a.out, "  %s %s\n", action.Type, action.Resource)
 		}
 		return 0
@@ -462,31 +856,31 @@ func (a *App) plan(args []string, apply bool) int {
 	if *hash == "" {
 		return a.fail("apply requires --hash from a reviewed plan")
 	}
-	if *hash != p.Hash {
+	if *hash != plan.Hash {
 		return a.fail("plan hash does not match the reviewed manifest")
 	}
-	if len(p.Actions) == 0 {
+	if len(plan.Actions) == 0 {
 		return 0
 	}
 	if !*yes && !isTerminal(a.in) {
 		return a.fail("apply requires --yes in noninteractive mode")
 	}
-	if !*yes && !a.confirm("apply plan "+p.ID) {
+	if !*yes && !a.confirm("apply plan "+plan.ID) {
 		return 1
 	}
 	results := []domain.Instance{}
-	for _, action := range p.Actions {
+	for _, action := range plan.Actions {
 		if action.Type != "create" || action.Spec == nil {
 			continue
 		}
-		i, err := a.p.CreateInstance(context.Background(), provider.CreateRequest{Spec: *action.Spec, IdempotencyKey: "plan-" + p.ID + "-" + action.ID})
+		i, err := backend.CreateInstance(context.Background(), provider.CreateRequest{Spec: *action.Spec, IdempotencyKey: "plan-" + plan.ID + "-" + action.ID})
 		if err != nil {
 			return a.fail(err.Error())
 		}
 		results = append(results, i)
 	}
 	if *mode == "json" {
-		return a.emit(map[string]any{"plan": p, "created": results}, nil)
+		return a.emit(map[string]any{"plan": plan, "created": results}, nil)
 	}
 	fmt.Fprintf(a.out, "applied %d action(s)\n", len(results))
 	return 0
