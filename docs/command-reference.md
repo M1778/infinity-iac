@@ -52,8 +52,11 @@ nested prefixes such as `infinity-iac create s<Tab>` resolve to `server` and
 
 ### `setup oracle`
 
-Validates an OCI CLI profile and records the deployment identifiers required to
-provision instances. Private credentials stay in the OCI CLI configuration.
+Loads the exact named OCI CLI profile and performs read-only API calls before
+recording the deployment identifiers required to provision instances. It
+validates the profile credentials, compartment, subnet, image, availability
+domain, and instance-list permission. No OCI resource is created, changed, or
+deleted by setup. Private credentials stay in the OCI CLI configuration.
 
 ```sh
 infinity-iac setup oracle \
@@ -231,8 +234,11 @@ system user config directory (for example, `~/.config/infinity-iac/config.json`
 on Linux). The file is created with owner-only permissions.
 
 The OCI private key remains in the OCI CLI config referenced by the selected
-profile. `setup oracle --config PATH` selects a non-default OCI config file; it
-does not copy that file. `--profile` selects the OCI profile name, while
+profile. `setup oracle --config PATH` selects a non-default OCI config file; it does not
+copy that file. If omitted, Infinity-IaC uses `OCI_CONFIG_FILE` when set, then
+`~/.oci/config` on Unix (or the equivalent home directory on Windows). It reads
+the exact profile named by `--profile` and does not fall back to another OCI
+profile or fabricate local credentials. `--profile` selects the OCI profile name, while
 `--name` names the Infinity-IaC access profile.
 
 Recipe discovery uses this precedence:

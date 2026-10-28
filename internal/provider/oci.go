@@ -5,20 +5,25 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/M1778/infinity-iac/internal/domain"
 	"github.com/oracle/oci-go-sdk/v65/common"
 	"github.com/oracle/oci-go-sdk/v65/core"
+	"github.com/oracle/oci-go-sdk/v65/identity"
 )
 
 var ErrOCIConfiguration = errors.New("OCI configuration is incomplete")
 
 type OCIProvider struct {
-	profile domain.AccessProfile
-	compute core.ComputeClient
-	network core.VirtualNetworkClient
+	profile   domain.AccessProfile
+	compute   core.ComputeClient
+	network   core.VirtualNetworkClient
+	identity  identity.IdentityClient
+	tenancyID string
 }
 
 func (p *OCIProvider) Profile() domain.AccessProfile { return p.profile }
@@ -34,7 +39,31 @@ func NewOCIProvider(profile domain.AccessProfile) (*OCIProvider, error) {
 	if len(parts) != 2 || parts[0] != "oci-profile" || strings.TrimSpace(parts[1]) == "" {
 		return nil, errors.New("invalid OCI credential source")
 	}
-	config := common.CustomProfileConfigProvider(profile.ConfigPath, parts[1])
+	configPath, err := ociConfigPath(profile.ConfigPath)
+	if err != nil {
+		return nil, err
+	}
+	config, err := common.ConfigurationProviderFromFileWithProfile(configPath, parts[1], "")
+	if err != nil {
+		return nil, fmt.Errorf("load OCI profile %q from %s: %w", parts[1], configPath, err)
+	}
+	if ok, err := common.IsConfigurationProviderValid(config); !ok {
+		if err == nil {
+			err = errors.New("OCI configuration provider is invalid")
+		}
+		return nil, fmt.Errorf("load OCI profile %q: %w", parts[1], err)
+	}
+	configuredRegion, err := config.Region()
+	if err != nil {
+		return nil, fmt.Errorf("read OCI profile region: %w", err)
+	}
+	if configuredRegion != profile.Region {
+		return nil, fmt.Errorf("OCI profile region %q does not match requested region %q", configuredRegion, profile.Region)
+	}
+	tenancyID, err := config.TenancyOCID()
+	if err != nil {
+		return nil, fmt.Errorf("read OCI tenancy OCID: %w", err)
+	}
 	compute, err := core.NewComputeClientWithConfigurationProvider(config)
 	if err != nil {
 		return nil, fmt.Errorf("create OCI compute client: %w", err)
@@ -45,10 +74,101 @@ func NewOCIProvider(profile domain.AccessProfile) (*OCIProvider, error) {
 		return nil, fmt.Errorf("create OCI network client: %w", err)
 	}
 	network.SetRegion(profile.Region)
-	return &OCIProvider{profile: profile, compute: compute, network: network}, nil
+	identityClient, err := identity.NewIdentityClientWithConfigurationProvider(config)
+	if err != nil {
+		return nil, fmt.Errorf("create OCI identity client: %w", err)
+	}
+	identityClient.SetRegion(profile.Region)
+	return &OCIProvider{profile: profile, compute: compute, network: network, identity: identityClient, tenancyID: tenancyID}, nil
+}
+
+func ociConfigPath(configPath string) (string, error) {
+	if configPath != "" {
+		return configPath, nil
+	}
+	if configPath := os.Getenv("OCI_CONFIG_FILE"); configPath != "" {
+		return configPath, nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("resolve OCI config path: %w", err)
+	}
+	return filepath.Join(home, ".oci", "config"), nil
 }
 
 func (p *OCIProvider) Name() string { return "oracle" }
+
+// ValidateAccess performs only read operations. It verifies that the selected
+// OCI profile can authenticate and inspect every resource required by a future
+// launch, then checks the compartment instance-list permission. No profile is
+// saved and no cloud resource is created by this method.
+func (p *OCIProvider) ValidateAccess(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	compartmentResp, err := p.identity.GetCompartment(ctx, identity.GetCompartmentRequest{CompartmentId: common.String(p.profile.CompartmentID)})
+	if err != nil {
+		return fmt.Errorf("inspect OCI compartment: %w", err)
+	}
+	if compartmentResp.Id == nil || *compartmentResp.Id != p.profile.CompartmentID {
+		return errors.New("OCI compartment response did not match the configured compartment")
+	}
+	if compartmentResp.LifecycleState != identity.CompartmentLifecycleStateActive {
+		return fmt.Errorf("OCI compartment is not active: %s", compartmentResp.LifecycleState)
+	}
+
+	subnetResp, err := p.network.GetSubnet(ctx, core.GetSubnetRequest{SubnetId: common.String(p.profile.SubnetID)})
+	if err != nil {
+		return fmt.Errorf("inspect OCI subnet: %w", err)
+	}
+	if subnetResp.Id == nil || *subnetResp.Id != p.profile.SubnetID {
+		return errors.New("OCI subnet response did not match the configured subnet")
+	}
+	if subnetResp.LifecycleState != core.SubnetLifecycleStateAvailable {
+		return fmt.Errorf("OCI subnet is not available: %s", subnetResp.LifecycleState)
+	}
+
+	imageResp, err := p.compute.GetImage(ctx, core.GetImageRequest{ImageId: common.String(p.profile.ImageID)})
+	if err != nil {
+		return fmt.Errorf("inspect OCI image: %w", err)
+	}
+	if imageResp.Id == nil || *imageResp.Id != p.profile.ImageID {
+		return errors.New("OCI image response did not match the configured image")
+	}
+	if imageResp.LifecycleState != core.ImageLifecycleStateAvailable {
+		return fmt.Errorf("OCI image is not available: %s", imageResp.LifecycleState)
+	}
+	if _, err := p.compute.GetImageShapeCompatibilityEntry(ctx, core.GetImageShapeCompatibilityEntryRequest{ImageId: common.String(p.profile.ImageID), ShapeName: common.String(p.profile.Shape)}); err != nil {
+		return fmt.Errorf("validate OCI image and shape compatibility: %w", err)
+	}
+
+	availabilityResp, err := p.identity.ListAvailabilityDomains(ctx, identity.ListAvailabilityDomainsRequest{CompartmentId: common.String(p.tenancyID)})
+	if err != nil {
+		return fmt.Errorf("list OCI availability domains: %w", err)
+	}
+	foundAvailabilityDomain := false
+	for _, item := range availabilityResp.Items {
+		if item.Name != nil && *item.Name == p.profile.AvailabilityDomain {
+			foundAvailabilityDomain = true
+			break
+		}
+	}
+	if !foundAvailabilityDomain {
+		return fmt.Errorf("OCI availability domain %q was not found in the configured tenancy", p.profile.AvailabilityDomain)
+	}
+	if err := p.validateInstanceList(ctx); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *OCIProvider) validateInstanceList(ctx context.Context) error {
+	_, err := p.compute.ListInstances(ctx, core.ListInstancesRequest{CompartmentId: common.String(p.profile.CompartmentID), Limit: common.Int(1)})
+	if err != nil {
+		return fmt.Errorf("list OCI instances: %w", err)
+	}
+	return nil
+}
 
 func (p *OCIProvider) ListInstances(ctx context.Context, filter Filter) ([]domain.Instance, error) {
 	if err := ctx.Err(); err != nil {
