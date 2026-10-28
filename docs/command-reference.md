@@ -200,3 +200,94 @@ The product design reserves these namespaces for future typed resource layers:
 
 Reserved commands should fail clearly until their owning layer is implemented;
 they must not silently emulate a real cloud operation.
+
+## Configuration and environment
+
+Infinity-IaC stores access profiles as JSON. Set `INFINITY_IAC_CONFIG` to use a
+project or CI-specific file; otherwise the file is placed under the operating
+system user config directory (for example, `~/.config/infinity-iac/config.json`
+on Linux). The file is created with owner-only permissions.
+
+The OCI private key remains in the OCI CLI config referenced by the selected
+profile. `setup oracle --config PATH` selects a non-default OCI config file; it
+does not copy that file. `--profile` selects the OCI profile name, while
+`--name` names the Infinity-IaC access profile.
+
+Recipe discovery uses this precedence:
+
+1. `--root PATH` on `list recipes` or `list capabilities`.
+2. `INFINITY_IAC_RECIPES`.
+3. A repository `recipes/` directory when running from a checkout.
+4. The catalog embedded in the release binary.
+
+## Output, confirmation, and errors
+
+Commands that support `--output` accept `table` (the default) or `json`. JSON is
+indented on stdout; errors are written to stderr and return a non-zero exit
+status. Use the JSON form for scripts instead of parsing table columns.
+
+`create server`, `run`, and `apply` are billable operations. `instance delete`
+is destructive. Interactive terminals prompt for confirmation; pipes, cron jobs,
+and CI runs must pass `--yes`. `--yes` is explicit confirmation and does not
+remove provider-side authorization checks.
+
+## OCI lifecycle behavior
+
+The OCI adapter owns only instances tagged `infinity-iac=true`. `list instances`
+filters out other OCI instances and terminated instances. It follows OCI list
+pagination and looks up the public IP from the first attached VNIC.
+
+A create request uses the profile's compartment, subnet, availability domain,
+image OCID, and shape. Flex shapes receive the requested vCPU and RAM values.
+The provider always requests a public IP and raises boot-volume requests below
+OCI's 50 GB minimum. The returned instance can remain `provisioning` while OCI
+finishes placement. `run` and `--startup-script` are cloud-init payloads; their
+commands execute on first boot after the launch API call returns.
+
+Stop uses OCI's stop action, restart uses a soft reset, and delete terminates
+the instance without preserving its boot volume. Verify the instance name or ID
+before deletion.
+
+## Manifest reference
+
+`plan` and `apply` accept `.json`, `.yaml`, and `.yml` files. The supported v1
+shape is:
+
+```yaml
+api_version: v1
+project: optional-label
+servers:
+  - name: demo
+    provider: oracle
+    access: default
+    region: us-phoenix-1
+    os: ubuntu-latest
+    cpu: 2
+    ram_gb: 2
+    storage_gb: 50
+    port: 8080
+    startup_script: ./bootstrap.sh
+```
+
+Missing OS, CPU, RAM, and storage values default to `ubuntu-latest`, 1 vCPU,
+1 GB, and 20 GB. Provider, access, and region default from the selected access
+profile when the CLI loads the manifest. The plan hash covers the normalized
+actions, not the plan timestamp, so `apply` can safely recompute it after review.
+`apply` currently executes create actions; it does not modify or destroy an
+existing instance that is absent from the manifest.
+
+## Troubleshooting
+
+- **No access profile configured:** run `setup oracle`, or point
+  `INFINITY_IAC_CONFIG` at the file that contains the profile.
+- **OCI configuration is incomplete:** provide compartment, subnet, availability
+  domain, image, shape, region, and an `oci-profile:NAME` credential source.
+- **OCI access validation fails:** run the OCI CLI with the same `--profile`,
+  `--config`, and region, then verify that the profile can list instances in
+  the compartment.
+- **Recipe is not found:** run `list recipes` and check the catalog precedence
+  above. A custom recipe must pass `validate recipe` first.
+- **Instance is running but the app is unavailable:** wait for cloud-init,
+  inspect `/var/log/cloud-init-output.log` on the instance, and verify that the
+  subnet's security rules allow the recipe port. `resources.ingress` is metadata
+  in 1.0.1 and does not edit OCI network rules.
