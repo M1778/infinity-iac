@@ -208,9 +208,6 @@ func (a *App) unlink(args []string) int {
 	if fs.NArg() != 0 {
 		return a.fail("unlink accepts one access profile name")
 	}
-	if name == "" && fs.NArg() == 1 {
-		name = fs.Arg(0)
-	}
 	if name == "" {
 		return a.fail("access profile name is required")
 	}
