@@ -34,7 +34,7 @@ UninstallDisplayIcon={app}\infinity-iac.exe
 Source: "{#SourceBinary}"; DestDir: "{app}"; DestName: "infinity-iac.exe"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\Infinity-IaC Command Prompt"; Filename: "{cmd}"; Parameters: "/K \"{app}\infinity-iac.exe --help\""; WorkingDir: "{app}"
+Name: "{group}\Infinity-IaC Command Prompt"; Filename: "{cmd}"; Parameters: "/K ""{app}\infinity-iac.exe"" --help"; WorkingDir: "{app}"
 
 [Tasks]
 Name: "addtopath"; Description: "Add Infinity-IaC to your user PATH"; Flags: unchecked
