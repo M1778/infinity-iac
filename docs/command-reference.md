@@ -106,8 +106,10 @@ infinity-iac list instances --output json
 
 ### `list recipes`
 
-Lists the validated built-in recipe catalog. Set `INFINITY_IAC_RECIPES` or use
-`--root` to inspect a filesystem catalog during development.
+Lists the validated built-in recipe catalog. In 1.0.1 this catalog contains
+exactly `n8n`; the planned 100+ application and script catalog is not shipped
+yet. Set `INFINITY_IAC_RECIPES` or use `--root` to inspect a filesystem catalog
+during development.
 
 ```sh
 infinity-iac list recipes
@@ -125,6 +127,21 @@ infinity-iac validate recipe --file recipes/n8n/recipe.yaml
 `recipe list` is an alias for `list recipes`, and `recipe validate` is an alias
 for this command. `list capabilities` reports the provider, operating system,
 and architecture metadata from the same catalog.
+
+### Built-in catalog status
+
+The source of truth for built-ins is `recipes/`, and `recipes/embed.go` embeds
+the selected files into release binaries. The current tree has one file:
+`recipes/n8n/recipe.yaml`. There are no built-in Docker, Kubernetes, database,
+monitoring, security, backup, networking, or general-purpose script recipes in
+1.0.1. A filesystem recipe found through `--root` or `INFINITY_IAC_RECIPES` is
+an external catalog entry and is not part of the release.
+
+The n8n built-in is an application recipe, not a prebuilt OCI image. OCI boots
+the image OCID saved in the access profile; cloud-init then installs `docker.io`
+and runs `docker.n8n.io/n8nio/n8n` on host port 5678 by default. Its health
+check and resource declarations can be inspected with `list recipes --output
+json`.
 
 ### `instance stop|restart|delete`
 
@@ -148,6 +165,11 @@ instance.
 ```sh
 infinity-iac run --app n8n --specs auto --port 1080 --startup-script ./start.sh --yes
 ```
+
+The only built-in invocation in 1.0.1 is `infinity-iac run --app n8n`. No
+built-in script recipe exists yet. Both `--app` and `--script` currently
+select a recipe by name; they do not enforce the recipe's `kind` field. Use
+`validate recipe` with a custom catalog while developing additional recipes.
 
 ### `plan` and `apply`
 
