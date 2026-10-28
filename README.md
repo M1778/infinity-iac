@@ -74,10 +74,12 @@ infinity-iac setup oracle \
   --ssh-public-key "$(cat ~/.ssh/id_ed25519.pub)"
 ```
 
-`setup oracle` validates the required values and performs a live
-`ListInstances` request before saving the profile. It stores identifiers and
-the OCI profile name, but not the private key. The first profile becomes the
-default; later profiles can be selected with `--access` on create commands.
+`setup oracle` loads the exact OCI profile and performs live, read-only API
+checks for the credentials, compartment, subnet, image, availability domain,
+image/shape compatibility, and instance-list permission before saving the
+profile. It stores identifiers and the OCI profile name, but not the private
+key. Setup creates no OCI resources. The first profile becomes the default;
+later profiles can be selected with `--access` on create commands.
 
 Create and inspect an instance:
 

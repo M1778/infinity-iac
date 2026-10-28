@@ -18,6 +18,27 @@ sh -n install.sh scripts/verify-release.sh
 git diff --check
 ```
 
+For a local production credential check, set the read-only integration variables
+from a shell or secret manager and run:
+
+```sh
+export INFINITY_IAC_OCI_INTEGRATION=1
+export INFINITY_IAC_OCI_PROFILE=DEFAULT
+export INFINITY_IAC_OCI_CONFIG="$HOME/.oci/config" # optional
+export INFINITY_IAC_OCI_REGION=us-phoenix-1
+export INFINITY_IAC_OCI_COMPARTMENT=ocid1.compartment.oc1..example
+export INFINITY_IAC_OCI_SUBNET=ocid1.subnet.oc1..example
+export INFINITY_IAC_OCI_AVAILABILITY_DOMAIN=PHX-AD-1
+export INFINITY_IAC_OCI_IMAGE=ocid1.image.oc1..example
+export INFINITY_IAC_OCI_SHAPE=VM.Standard.E4.Flex
+make test-oci-integration
+```
+
+This test reads the OCI private key referenced by the local config and performs
+only compartment, subnet, image, availability-domain, and instance-list reads.
+It never creates or deletes an instance. Do not put the OCI config or private
+key in the repository, CI logs, or issue comments.
+
 Update user-facing release notes and `TODO.md` as needed. Do not put OCI
 private keys or other credentials in the repository or GitHub Actions
 variables.

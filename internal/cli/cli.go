@@ -155,9 +155,9 @@ func (a *App) setup(args []string) int {
 	if err != nil {
 		return a.fail("validate OCI credentials: " + err.Error())
 	}
-	checkCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	checkCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	if _, err := backend.ListInstances(checkCtx, provider.Filter{}); err != nil {
+	if err := backend.ValidateAccess(checkCtx); err != nil {
 		return a.fail("validate OCI access: " + err.Error())
 	}
 	p.ValidatedAt = time.Now().UTC()
@@ -165,7 +165,9 @@ func (a *App) setup(args []string) int {
 	if err := config.Save(a.configPath, a.cfg); err != nil {
 		return a.fail("save config: " + err.Error())
 	}
-	return a.emit(map[string]any{"profile": p, "config": a.configPath, "validation": "OCI configuration validated"}, func() { fmt.Fprintf(a.out, "configured OCI access %q (%s)\n", p.Name, p.CredentialSource) })
+	return a.emit(map[string]any{"profile": p, "config": a.configPath, "validation": "OCI credentials and required resources validated with read-only API calls"}, func() {
+		fmt.Fprintf(a.out, "configured OCI access %q (%s); credentials and required resources validated\n", p.Name, p.CredentialSource)
+	})
 }
 
 func validateAccessProfile(p domain.AccessProfile) error {

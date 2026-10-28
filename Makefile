@@ -1,7 +1,7 @@
 GO ?= go
 BINARY ?= infinity-iac
 
-.PHONY: all build test test-race vet fmt-check validate-recipes verify-release clean
+.PHONY: all build test test-race test-oci-integration vet fmt-check validate-recipes verify-release clean
 
 all: test vet build
 
@@ -14,6 +14,9 @@ test:
 
 test-race:
 	$(GO) test -race ./...
+
+test-oci-integration:
+	INFINITY_IAC_OCI_INTEGRATION=1 $(GO) test ./internal/provider -run '^TestOCIProviderLiveReadOnlyAccess$$' -count=1 -v
 
 vet:
 	$(GO) vet ./...
