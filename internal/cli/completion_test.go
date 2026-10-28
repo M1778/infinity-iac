@@ -25,6 +25,12 @@ func TestCompletionCandidates(t *testing.T) {
 	if got := completionCandidates([]string{"list", "recipes"}); !contains(got, "--root") {
 		t.Fatalf("recipe list flags = %v", got)
 	}
+	if got := completionCandidates([]string{"app"}); !contains(got, "install") {
+		t.Fatalf("app candidates = %v", got)
+	}
+	if got := completionCandidates([]string{"update"}); !contains(got, "--yes") {
+		t.Fatalf("update candidates = %v", got)
+	}
 }
 
 func TestCompletionScriptsCoverSupportedShells(t *testing.T) {

@@ -151,6 +151,35 @@ flag, the [built-in catalog](docs/builtin-catalog.md) for the exact shipped
 inventory, the [recipe format](docs/recipe-format.md) for custom applications,
 and the [release guide](docs/releasing.md) for maintainers.
 
+### Install a third-party app recipe
+
+Third-party recipes are intentionally unsafe: their steps can execute arbitrary
+commands as root during first boot. Review the manifest and pass --yes in
+automation. Installation stores the validated recipe locally and never runs it.
+
+~~~sh
+infinity-iac app install owner/repository --yes
+infinity-iac app install --external https://example.com/app.yml --yes
+infinity-iac app install ./google-app.yml --yes
+infinity-iac list recipes
+~~~
+
+GitHub repositories must expose app.yml, app.yaml, recipe.yml, recipe.yaml, or
+recipe.json at their root. External URLs must use HTTPS. Remote recipes
+containing upload steps are rejected because their referenced files are not
+available to the CLI. Local upload sources are copied into the private
+installed-app directory.
+
+### Update
+
+Update the running CLI from a published GitHub Release. The binary and
+SHA256SUMS are downloaded and verified before an atomic replacement.
+
+~~~sh
+infinity-iac update --yes
+infinity-iac update --version v1.0.1 --yes
+~~~
+
 ## Shell completion
 
 Generate a native completion adapter once and source it from the shell startup

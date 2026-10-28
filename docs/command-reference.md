@@ -50,6 +50,33 @@ nested prefixes such as `infinity-iac create s<Tab>` resolve to `server` and
 
 ## Available commands
 
+### app install
+
+Installs a validated third-party recipe into the local app catalog. Recipes
+are unsafe and their steps can run as root during run; review the manifest
+before confirming. Use --yes for noninteractive operation.
+
+~~~sh
+infinity-iac app install owner/repository --yes
+infinity-iac app install --external https://example.com/app.yml --yes
+infinity-iac app install ./google-app.yml --yes
+~~~
+
+GitHub sources are read from one of app.yml, app.yaml, recipe.yml, recipe.yaml,
+or recipe.json at the repository root. External sources must use HTTPS. Remote
+recipes with upload steps are rejected because their assets cannot be fetched
+as part of a single manifest.
+
+### update
+
+Downloads the matching binary and SHA256SUMS from the GitHub Release, verifies
+the digest, then atomically replaces the current executable.
+
+~~~sh
+infinity-iac update --yes
+infinity-iac update --version v1.0.1 --yes
+~~~
+
 ### `setup oracle`
 
 Loads the exact named OCI CLI profile and performs read-only API calls before

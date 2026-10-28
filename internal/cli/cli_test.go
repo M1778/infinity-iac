@@ -126,6 +126,47 @@ func TestRunUnknownApplicationFailsBeforeProvisioning(t *testing.T) {
 	}
 }
 
+func TestThirdPartyAppInstallStoresRecipeAndListsIt(t *testing.T) {
+	configPath := filepath.Join(t.TempDir(), "config.json")
+	t.Setenv("INFINITY_IAC_CONFIG", configPath)
+	manifest := filepath.Join(t.TempDir(), "app.yml")
+	content := "api_version: recipe/v1\nname: hello\nversion: 1.0.0\nkind: script\nsteps:\n  - id: run\n    type: command\n    command: echo hello\n"
+	if err := os.WriteFile(manifest, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	out, stderr, code := call(t, "app", "install", manifest, "--yes", "--output", "json")
+	if code != 0 {
+		t.Fatalf("install failed: %d %s", code, stderr)
+	}
+	if !strings.Contains(out, "status") || !strings.Contains(out, "installed") {
+		t.Fatalf("unexpected install output: %s", out)
+	}
+	out, stderr, code = call(t, "list", "recipes", "--output", "json")
+	if code != 0 || !strings.Contains(out, "hello") {
+		t.Fatalf("installed recipe missing: %d %s %s", code, stderr, out)
+	}
+}
+
+func TestThirdPartyAppInstallRequiresYesNonInteractive(t *testing.T) {
+	t.Setenv("INFINITY_IAC_CONFIG", filepath.Join(t.TempDir(), "config.json"))
+	manifest := filepath.Join(t.TempDir(), "app.yml")
+	if err := os.WriteFile(manifest, []byte("api_version: recipe/v1\nname: hello\nversion: 1.0.0\nkind: script\nsteps:\n  - id: run\n    type: command\n    command: echo hello\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, stderr, code := call(t, "app", "install", manifest)
+	if code == 0 || !strings.Contains(stderr, "requires --yes") {
+		t.Fatalf("expected confirmation failure: %d %s", code, stderr)
+	}
+}
+
+func TestExternalAppInstallRejectsHTTP(t *testing.T) {
+	t.Setenv("INFINITY_IAC_CONFIG", filepath.Join(t.TempDir(), "config.json"))
+	_, stderr, code := call(t, "app", "install", "--external", "http://example.com/app.yml", "--yes")
+	if code == 0 || !strings.Contains(stderr, "HTTPS") {
+		t.Fatalf("expected HTTPS rejection: %d %s", code, stderr)
+	}
+}
+
 func TestRecipeCloudInitUsesPortAndRejectsMissingUpload(t *testing.T) {
 	r, ok := findRecipe("n8n")
 	if !ok {
@@ -145,5 +186,29 @@ func TestRecipeCloudInitUsesPortAndRejectsMissingUpload(t *testing.T) {
 	r.Steps = append(r.Steps, recipe.Step{ID: "missing", Type: "upload", Source: filepath.Join(t.TempDir(), "missing"), Destination: "/tmp/missing"})
 	if _, err := recipeCloudInit(r, 1080); err == nil {
 		t.Fatal("expected missing upload source to fail")
+	}
+}
+
+func TestUpdateChecksumParsing(t *testing.T) {
+	value := strings.Repeat("a", 64)
+	got, err := checksumFor(value+"  infinity-iac_linux_amd64\n", "infinity-iac_linux_amd64")
+	if err != nil || got != value {
+		t.Fatalf("checksumFor = %q, %v", got, err)
+	}
+	if _, err := checksumFor("bad  infinity-iac_linux_amd64\n", "infinity-iac_linux_amd64"); err == nil {
+		t.Fatal("expected invalid checksum error")
+	}
+	if _, err := checksumFor(value+"  other\n", "infinity-iac_linux_amd64"); err == nil {
+		t.Fatal("expected missing checksum error")
+	}
+}
+
+func TestReleaseBaseNormalizesVersion(t *testing.T) {
+	got, err := releaseBase("owner/repo", "1.2.3")
+	if err != nil || got != "https://github.com/owner/repo/releases/download/v1.2.3" {
+		t.Fatalf("release base = %q, %v", got, err)
+	}
+	if _, err := releaseBase("owner/bad/repo", "latest"); err == nil {
+		t.Fatal("expected invalid repository error")
 	}
 }

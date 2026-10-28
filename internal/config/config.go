@@ -25,6 +25,14 @@ func Path() (string, error) {
 	return filepath.Join(base, "infinity-iac", "config.json"), nil
 }
 
+// AppsDir returns the owner-only directory used for installed third-party
+// recipes. Keeping it beside the config makes INFINITY_IAC_CONFIG useful for
+// isolated project environments while retaining the platform config location
+// by default.
+func AppsDir(configPath string) string {
+	return filepath.Join(filepath.Dir(configPath), "apps")
+}
+
 func Load() (File, string, error) {
 	p, err := Path()
 	if err != nil {
