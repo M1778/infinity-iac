@@ -50,9 +50,9 @@ jobs:
           mkdir -p dist
           ext=""
           if [ "$GOOS" = "windows" ]; then ext=".exe"; fi
-          go build -trimpath -ldflags="-s -w" -o "dist/infinity-iac_$GOOS_$GOARCH${ext}" ./cmd/infinity-iac
+          go build -trimpath -ldflags="-s -w" -o "dist/infinity-iac_${GOOS}_${GOARCH}${ext}" ./cmd/infinity-iac
           if [ "$GOOS" = "windows" ]; then
-            sha256sum "dist/infinity-iac_$GOOS_$GOARCH${ext}" > "dist/infinity-iac_$GOOS_$GOARCH.sha256"
+            sha256sum "dist/infinity-iac_${GOOS}_${GOARCH}${ext}" > "dist/infinity-iac_${GOOS}_${GOARCH}.sha256"
           fi
 
       - name: Upload release binary
