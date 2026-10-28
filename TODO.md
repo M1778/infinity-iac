@@ -17,3 +17,19 @@
   - Test the shell installer on supported Linux and macOS runners.
   - Build the Windows installer from the tagged release source and attach it to the same GitHub Release.
   - Keep artifact names and release metadata deterministic so the installers can resolve the correct version.
+
+## GitHub releases and Go packages
+
+- [x] Keep tag-driven GitHub Release CI publishing the platform binaries,
+  `install.sh`, Windows `setup.exe`, and `SHA256SUMS`.
+  - Build from `v*.*.*` tags only.
+  - Verify every required asset before `gh release create`.
+  - Document the release and rollback checks in `docs/releasing.md`.
+- [ ] Publish an importable `infinity-iac` Go library/module package.
+  - Move or expose only the stable public API from the current `internal/`
+    implementation; keep provider credentials and lifecycle invariants behind
+    that API.
+  - Add package API, compatibility, documentation, and focused tests before
+    publishing.
+  - Add a protected GitHub Actions publish job for the selected registry or
+    Go module tag flow, with release provenance and no stored OCI secrets.
