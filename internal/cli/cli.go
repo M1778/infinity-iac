@@ -77,6 +77,10 @@ func RunWithIO(args []string, in io.Reader, out, errOut io.Writer) int {
 		return a.plan(args[1:], true)
 	case "install":
 		return a.install(args[1:])
+	case "app":
+		return a.app(args[1:])
+	case "update":
+		return a.update(args[1:])
 	case "completion":
 		return a.completion(args[1:])
 	default:
@@ -86,7 +90,7 @@ func RunWithIO(args []string, in io.Reader, out, errOut io.Writer) int {
 }
 func (a *App) help() {
 	fmt.Fprintln(a.out, "Infinity-IaC: infrastructure lifecycle CLI")
-	fmt.Fprintln(a.out, "commands: setup, unlink, list, create, run, instance, plan, apply, install, recipe, validate, completion, doctor")
+	fmt.Fprintln(a.out, "commands: setup, unlink, list, create, run, instance, plan, apply, install, app, update, recipe, validate, completion, doctor")
 	fmt.Fprintln(a.out, "examples:")
 	fmt.Fprintln(a.out, "  infinity-iac setup oracle --name default --profile DEFAULT --region us-phoenix-1 --compartment OCID --subnet OCID --availability-domain AD --image OCID --shape SHAPE")
 	fmt.Fprintln(a.out, "  infinity-iac create server --name demo --provider oracle --yes")
@@ -411,6 +415,22 @@ func loadRecipes(root string) ([]recipe.Recipe, string, error) {
 	}
 	if err != nil {
 		return nil, source, err
+	}
+	// Installed recipes are part of the normal user catalog. Explicit roots and
+	// INFINITY_IAC_RECIPES remain isolated development catalogs.
+	if root == "" && os.Getenv("INFINITY_IAC_RECIPES") == "" {
+		configPath, pathErr := config.Path()
+		if pathErr != nil {
+			return nil, source, pathErr
+		}
+		installed, appErr := recipe.Discover(config.AppsDir(configPath))
+		if appErr != nil && !errors.Is(appErr, os.ErrNotExist) {
+			return nil, source, fmt.Errorf("discover installed recipes: %w", appErr)
+		}
+		items = append(items, installed...)
+		if len(installed) > 0 {
+			source += ", installed"
+		}
 	}
 	catalog, err := recipe.NewCatalog(items)
 	if err != nil {

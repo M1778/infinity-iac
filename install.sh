@@ -65,8 +65,8 @@ trap 'rm -rf "$tmpdir"' EXIT HUP INT TERM
 
 binary=$tmpdir/$asset
 checksums=$tmpdir/SHA256SUMS
-curl --fail --location --silent --show-error "$release_base/$asset" --output "$binary" || die "could not download $asset"
-curl --fail --location --silent --show-error "$release_base/SHA256SUMS" --output "$checksums" || die "could not download SHA256SUMS"
+curl --fail --location --silent --show-error "$release_base/$asset" --output "$binary" || die "could not download $asset; no GitHub Release asset exists for $version (publish the release or set --repo/--version)"
+curl --fail --location --silent --show-error "$release_base/SHA256SUMS" --output "$checksums" || die "could not download SHA256SUMS for $version"
 
 expected=$(awk -v file="$asset" '$2 == file { print $1; exit }' "$checksums")
 [ -n "$expected" ] || die "checksum entry for $asset is missing"
