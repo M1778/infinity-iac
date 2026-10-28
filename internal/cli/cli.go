@@ -55,6 +55,8 @@ func RunWithIO(args []string, in io.Reader, out, errOut io.Writer) int {
 	switch args[0] {
 	case "setup":
 		return a.setup(args[1:])
+	case "unlink":
+		return a.unlink(args[1:])
 	case "list":
 		return a.list(args[1:])
 	case "recipe":
@@ -84,7 +86,7 @@ func RunWithIO(args []string, in io.Reader, out, errOut io.Writer) int {
 }
 func (a *App) help() {
 	fmt.Fprintln(a.out, "Infinity-IaC: infrastructure lifecycle CLI")
-	fmt.Fprintln(a.out, "commands: setup, list, create, run, instance, plan, apply, install, recipe, validate, completion, doctor")
+	fmt.Fprintln(a.out, "commands: setup, unlink, list, create, run, instance, plan, apply, install, recipe, validate, completion, doctor")
 	fmt.Fprintln(a.out, "examples:")
 	fmt.Fprintln(a.out, "  infinity-iac setup oracle --name default --profile DEFAULT --region us-phoenix-1 --compartment OCID --subnet OCID --availability-domain AD --image OCID --shape SHAPE")
 	fmt.Fprintln(a.out, "  infinity-iac create server --name demo --provider oracle --yes")
@@ -175,6 +177,65 @@ func validateAccessProfile(p domain.AccessProfile) error {
 		return errors.New("--compartment, --subnet, --availability-domain, --image, and --shape are required")
 	}
 	return nil
+}
+
+func (a *App) unlink(args []string) int {
+	if len(args) == 0 || args[0] == "help" {
+		fmt.Fprintln(a.out, "usage: unlink acc NAME [--yes] [--output table|json]")
+		return 0
+	}
+	if args[0] != "acc" && args[0] != "access" {
+		return a.fail("unknown unlink target " + args[0])
+	}
+	var name string
+	parseArgs := make([]string, 0, len(args[1:]))
+	for _, arg := range args[1:] {
+		if strings.HasPrefix(arg, "-") {
+			parseArgs = append(parseArgs, arg)
+		} else if name == "" {
+			name = arg
+		} else {
+			parseArgs = append(parseArgs, arg)
+		}
+	}
+	fs := flag.NewFlagSet("unlink acc", flag.ContinueOnError)
+	fs.SetOutput(a.err)
+	yes := fs.Bool("yes", false, "confirm local disconnect")
+	mode := fs.String("output", "table", "table or json")
+	if err := fs.Parse(parseArgs); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 {
+		return a.fail("unlink accepts one access profile name")
+	}
+	if name == "" && fs.NArg() == 1 {
+		name = fs.Arg(0)
+	}
+	if name == "" {
+		return a.fail("access profile name is required")
+	}
+	if *mode != "table" && *mode != "json" {
+		return a.fail("output must be table or json")
+	}
+	if _, ok := a.cfg.Profile(name); !ok {
+		return a.fail(fmt.Sprintf("access profile %q is not configured", name))
+	}
+	if !*yes && !isTerminal(a.in) {
+		return a.fail("unlink requires --yes in noninteractive mode")
+	}
+	if !*yes && !a.confirm("unlink local access profile "+name) {
+		return 1
+	}
+	a.cfg.RemoveProfile(name)
+	if err := config.Save(a.configPath, a.cfg); err != nil {
+		return a.fail("save config: " + err.Error())
+	}
+	result := map[string]any{"name": name, "status": "unlinked", "config": a.configPath, "remote": "unchanged"}
+	if strings.EqualFold(*mode, "json") {
+		return a.emit(result, nil)
+	}
+	fmt.Fprintf(a.out, "unlinked local access profile %q; OCI credentials and resources unchanged\n", name)
+	return 0
 }
 
 func (a *App) provider() (provider.Provider, error) {

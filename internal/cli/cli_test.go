@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/M1778/infinity-iac/internal/config"
+	"github.com/M1778/infinity-iac/internal/domain"
 	"github.com/M1778/infinity-iac/internal/recipe"
 )
 
@@ -32,6 +34,33 @@ func TestCreateRequiresYesWhenInputIsNotTerminal(t *testing.T) {
 	_, stderr, code := call(t, "create", "server", "--name", "demo", "--provider", "oracle")
 	if code == 0 || stderr == "" {
 		t.Fatalf("expected noninteractive confirmation error, code=%d stderr=%q", code, stderr)
+	}
+}
+
+func TestUnlinkRemovesLocalAccessProfileAndPromotesDefault(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	t.Setenv("INFINITY_IAC_CONFIG", path)
+	file := config.File{DefaultAccess: "first", Profiles: []domain.AccessProfile{{Name: "first", Provider: "oracle"}, {Name: "second", Provider: "oracle"}}}
+	if err := config.Save(path, file); err != nil {
+		t.Fatal(err)
+	}
+	out, stderr, code := call(t, "unlink", "acc", "first", "--yes", "--output", "json")
+	if code != 0 {
+		t.Fatalf("unlink failed: %d %s", code, stderr)
+	}
+	var result map[string]any
+	if err := json.Unmarshal([]byte(out), &result); err != nil {
+		t.Fatal(err)
+	}
+	if result["status"] != "unlinked" || result["remote"] != "unchanged" {
+		t.Fatalf("unexpected unlink result: %s", out)
+	}
+	updated, _, err := config.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.DefaultAccess != "second" || len(updated.Profiles) != 1 || updated.Profiles[0].Name != "second" {
+		t.Fatalf("unexpected config after unlink: %+v", updated)
 	}
 }
 

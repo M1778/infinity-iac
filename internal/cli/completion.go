@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-var topLevelCommands = []string{"setup", "list", "create", "run", "network", "instance", "sandbox", "wrap", "install", "plan", "apply", "import", "recipe", "validate", "doctor", "completion", "version", "help"}
+var topLevelCommands = []string{"setup", "unlink", "list", "create", "run", "network", "instance", "sandbox", "wrap", "install", "plan", "apply", "import", "recipe", "validate", "doctor", "completion", "version", "help"}
 
 // complete is a shell-neutral protocol: one candidate per line. Shell
 // adapters do prefix filtering and turn these candidates into native menus.
@@ -49,6 +49,8 @@ func completionCandidates(words []string) []string {
 	switch command {
 	case "setup":
 		return []string{"oracle", "backup", "help"}
+	case "unlink":
+		return []string{"acc", "access", "help"}
 	case "list":
 		return []string{"acc", "access", "instances", "recipes", "capabilities", "help", "--output", "--output=json"}
 	case "recipe":
