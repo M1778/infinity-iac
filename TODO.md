@@ -33,3 +33,18 @@
     publishing.
   - Add a protected GitHub Actions publish job for the selected registry or
     Go module tag flow, with release provenance and no stored OCI secrets.
+
+## Built-in applications and scripts
+
+- [ ] Build and ship the planned 100+ popular application and script recipes.
+  - The current 1.0.1 embedded catalog contains only `n8n`; do not mark this
+    item complete until the catalog and release binary contain the full set.
+  - Organize recipes by stable name and version under `recipes/<name>/` and
+    embed every release recipe through `recipes/embed.go`.
+  - Cover each recipe with validation, supported provider/OS/architecture
+    metadata, resource sizing, ports and ingress requirements, idempotent
+    cloud-init steps, health checks, outputs, and cleanup guidance.
+  - Add CI checks for catalog count, duplicate names, recipe validation, and a
+    smoke test that renders each recipe's cloud-init without OCI credentials.
+  - Publish a generated catalog index so users can browse every built-in app
+    and script before provisioning anything.

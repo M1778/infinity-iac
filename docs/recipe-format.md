@@ -7,8 +7,9 @@ within the selected catalog.
 
 ## Catalog selection
 
-Release binaries include the validated built-in catalog. When running from a
-checkout, the CLI uses a `recipes/` directory if it exists. Set
+Release binaries include the validated built-in catalog. In 1.0.1 it contains
+only `n8n`; the 100+ application and script catalog is planned, not shipped.
+When running from a checkout, the CLI uses a `recipes/` directory if it exists. Set
 `INFINITY_IAC_RECIPES` or pass `--root` to inspect another catalog:
 
 ```sh
@@ -114,12 +115,14 @@ its cloud-init logs when a service is not ready.
 
 ```sh
 infinity-iac run --app demo --port 8080 --name demo --yes
-infinity-iac run --script n8n --startup-script ./extra.sh --output json --yes
+infinity-iac run --app n8n --startup-script ./extra.sh --output json --yes
 ```
 
 `--specs` currently accepts only `auto`; the recipe resources are used. An
 unknown recipe fails before an OCI create request. `--startup-script` is read
-locally and appended to the generated cloud-init script.
+locally and appended to the generated cloud-init script. Both `--app` and
+`--script` select a recipe by name; the flag does not currently filter on the
+recipe's `kind` field.
 
 ## Built-in example
 
@@ -133,3 +136,17 @@ infinity-iac run --app n8n --port 5678 --yes
 
 The recipe's declared URL and secret outputs are catalog metadata in 1.0.1; the
 CLI does not yet retrieve generated values from the running instance.
+
+## Catalog expansion status
+
+There is currently one built-in recipe file, `recipes/n8n/recipe.yaml`. Adding a
+recipe to a local directory does not add it to release binaries. A built-in
+must be reviewed, placed under `recipes/<name>/recipe.yaml`, included by
+`recipes/embed.go`, and covered by catalog validation and execution tests. The
+planned 100+ catalog should be delivered in batches so every app and script has
+an owner, supported OCI image and architecture, resource sizing, ports and
+network requirements, health checks, and a documented rollback or cleanup
+path.
+
+See [the built-in catalog](builtin-catalog.md) for the exact release inventory
+and the complete first-boot behavior of `n8n`.

@@ -92,6 +92,41 @@ infinity-iac list instances --output json
 is the image OCID saved by `setup oracle`. OCI boot volumes have a 50 GB
 provider minimum, so a smaller requested size is raised to 50 GB.
 
+## Built-in app and script catalog
+
+The 1.0.1 release does **not** contain the planned 100+ popular applications
+and scripts. Its embedded catalog currently contains exactly one recipe:
+
+| Name | Kind | What it does | Default resources |
+| --- | --- | --- | --- |
+| `n8n` | application | Installs Docker and starts the n8n workflow automation service | 2 vCPU, 2 GB RAM, 35 GB requested storage |
+
+The n8n recipe uses the OCI image OCID from your access profile as its Ubuntu
+base image, installs the Ubuntu `docker.io` package, and launches
+`docker.n8n.io/n8nio/n8n` with `--restart unless-stopped`. Its default host
+port is 5678, its declared HTTP health check targets `/`, and its declared
+URL output is metadata; 1.0.1 does not yet fetch generated application output
+values from the instance.
+
+Inspect the catalog shipped by the binary:
+
+```sh
+infinity-iac list recipes
+infinity-iac list capabilities --output json
+```
+
+`run --app` and `run --script` both resolve names from this same validated
+recipe catalog. `run --script` is not yet a separate library of shell scripts,
+and a name that is not listed fails before an OCI instance is created. The
+catalog code supports adding more versioned YAML/JSON recipes, but those files
+must be added, validated, embedded, and tested before they become built-ins.
+
+The 100+ catalog is therefore a development target, not a feature already
+present in 1.0.1. Track its implementation in the catalog roadmap in
+`TODO.md` and treat each recipe as production code: it needs a supported OCI
+image/architecture, idempotent bootstrap steps, health checks, resource
+defaults, port/security documentation, and a CI validation case.
+
 ## Common workflows
 
 - Use `list acc` to inspect saved profiles and `doctor` to inspect local CLI
@@ -108,8 +143,9 @@ provider minimum, so a smaller requested size is raised to 50 GB.
   during first boot.
 
 See the [command reference](docs/command-reference.md) for every supported
-flag, the [recipe format](docs/recipe-format.md) for custom applications, and
-the [release guide](docs/releasing.md) for maintainers.
+flag, the [built-in catalog](docs/builtin-catalog.md) for the exact shipped
+inventory, the [recipe format](docs/recipe-format.md) for custom applications,
+and the [release guide](docs/releasing.md) for maintainers.
 
 ## Shell completion
 
