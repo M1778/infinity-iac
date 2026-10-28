@@ -91,6 +91,32 @@ func (f *File) UpsertProfile(p domain.AccessProfile) {
 	}
 }
 
+// RemoveProfile removes a named local access profile. It never contacts a
+// provider and never revokes or edits credentials in the provider's config.
+// When the default profile is removed, the next remaining profile becomes the
+// default; an empty profile set has no default.
+func (f *File) RemoveProfile(name string) bool {
+	index := -1
+	for i, p := range f.Profiles {
+		if p.Name == name {
+			index = i
+			break
+		}
+	}
+	if index < 0 {
+		return false
+	}
+	f.Profiles = append(f.Profiles[:index], f.Profiles[index+1:]...)
+	if f.DefaultAccess == name {
+		if len(f.Profiles) == 0 {
+			f.DefaultAccess = ""
+		} else {
+			f.DefaultAccess = f.Profiles[0].Name
+		}
+	}
+	return true
+}
+
 func NewProfile(name, providerName, source, account, region string) domain.AccessProfile {
 	return domain.AccessProfile{Name: name, Provider: providerName, CredentialSource: source, Account: account, Region: region}
 }

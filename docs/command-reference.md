@@ -74,6 +74,18 @@ Lists configured access profiles. Use `--output json` for automation.
 infinity-iac list acc --output json
 ```
 
+### `unlink acc`
+
+Removes an Infinity-IaC access profile from the local configuration. It does not
+revoke the OCI CLI profile, delete OCI resources, or contact Oracle. If the
+removed profile was the default, the first remaining profile becomes the new
+default. Scripts must pass `--yes`; interactive use prompts for confirmation.
+
+```sh
+infinity-iac unlink acc default --yes
+infinity-iac unlink acc default --yes --output json
+```
+
 ### `create server`
 
 Creates one or more OCI instances through the configured production provider.

@@ -134,6 +134,8 @@ defaults, port/security documentation, and a CI validation case.
 - Use `list acc` to inspect saved profiles and `doctor` to inspect local CLI
   state. `doctor` does not make a cloud request; rerun `setup oracle` to test
   OCI access.
+- Use `unlink acc NAME --yes` to remove a saved local access profile. This
+  leaves the OCI CLI credentials and all remote resources unchanged.
 - Use `instance stop`, `instance restart`, and `instance delete` with either an
   instance name or OCI instance ID. Deletion requires `--yes` in scripts.
 - Use `--output json` whenever another program will consume the result.
