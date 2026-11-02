@@ -67,7 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out installer sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Download release binaries
         uses: actions/download-artifact@v8
@@ -106,7 +106,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Check out installer sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Download Windows binary
         uses: actions/download-artifact@v4
