@@ -131,8 +131,23 @@ func (a *App) setup(args []string) int {
 	image := fs.String("image", "", "OCI image OCID")
 	shape := fs.String("shape", "", "OCI compute shape")
 	sshKey := fs.String("ssh-public-key", "", "SSH public key")
+	autodetect := fs.Bool("autodetect", false, "automatically detect OCI configuration")
 	if err := fs.Parse(args[1:]); err != nil {
 		return 2
+	}
+	if *autodetect {
+		paths := []string{os.Getenv("OCI_CONFIG_FILE"), "/root/.oci/config"}
+		if home, err := os.UserHomeDir(); err == nil {
+			paths = append(paths, filepath.Join(home, ".oci", "config"))
+		}
+		for _, p := range paths {
+			if p != "" {
+				if _, err := os.Stat(p); err == nil {
+					*configFile = p
+					break
+				}
+			}
+		}
 	}
 	if *name == "" {
 		*name = "default"
@@ -628,6 +643,7 @@ func (a *App) run(args []string) int {
 	fs.SetOutput(a.err)
 	app := fs.String("app", "", "application name")
 	script := fs.String("script", "", "recipe name")
+	recipe := fs.String("recipe", "", "recipe name (alias)")
 	specs := fs.String("specs", "auto", "specification preset")
 	port := fs.Int("port", 0, "application port")
 	name := fs.String("name", "", "instance name")
@@ -643,6 +659,9 @@ func (a *App) run(args []string) int {
 	target := *app
 	if target == "" {
 		target = *script
+	}
+	if target == "" {
+		target = *recipe
 	}
 	if *name == "" {
 		*name = target
