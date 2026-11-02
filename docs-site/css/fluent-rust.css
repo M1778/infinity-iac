@@ -1,0 +1,235 @@
+:root {
+    /* Microsoft Fluent Design Palette */
+    --fluent-bg: #faf9f8;
+    --fluent-surface: #ffffff;
+    --fluent-primary: #0078D4;
+    --fluent-primary-hover: #106EBE;
+    --fluent-text: #323130;
+    --fluent-text-secondary: #605E5C;
+    --fluent-border: #edebe9;
+    --fluent-sidebar-bg: #f3f2f1;
+    --fluent-radius: 4px;
+    --fluent-shadow: 0 1.6px 3.6px 0 rgba(0,0,0,0.132), 0 0.3px 0.9px 0 rgba(0,0,0,0.108);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI Variable', 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    background-color: var(--fluent-bg);
+    color: var(--fluent-text);
+    line-height: 1.6;
+}
+
+/* Layout inspired by Rust Docs */
+.layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 250px;
+    background-color: var(--fluent-sidebar-bg);
+    border-right: 1px solid var(--fluent-border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+.sidebar-header {
+    padding: 24px 20px;
+    border-bottom: 1px solid var(--fluent-border);
+}
+
+.sidebar-header h2 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--fluent-text);
+}
+
+.version {
+    font-size: 0.8rem;
+    color: var(--fluent-text-secondary);
+}
+
+.nav-links {
+    list-style: none;
+    padding: 12px 0;
+}
+
+.nav-links li a {
+    display: block;
+    padding: 8px 20px;
+    color: var(--fluent-text);
+    text-decoration: none;
+    font-size: 0.95rem;
+    transition: background-color 0.1s ease;
+}
+
+.nav-links li a:hover {
+    background-color: #edebe9;
+}
+
+.nav-links li a.active {
+    font-weight: 600;
+    border-left: 3px solid var(--fluent-primary);
+    background-color: #edebe9;
+    padding-left: 17px; /* compensate for border */
+}
+
+/* Main Content */
+.content {
+    flex: 1;
+    margin-left: 250px;
+    display: flex;
+    flex-direction: column;
+}
+
+.topbar {
+    height: 60px;
+    background-color: var(--fluent-surface);
+    border-bottom: 1px solid var(--fluent-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.breadcrumb {
+    font-size: 0.9rem;
+    color: var(--fluent-text-secondary);
+}
+
+.btn {
+    padding: 6px 16px;
+    border-radius: var(--fluent-radius);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.btn-primary {
+    background-color: var(--fluent-primary);
+    color: white;
+    border: 1px solid transparent;
+}
+
+.btn-primary:hover {
+    background-color: var(--fluent-primary-hover);
+}
+
+/* Document */
+.document {
+    max-width: 860px;
+    padding: 48px 32px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.document h1 {
+    font-size: 2.5rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    letter-spacing: -0.02em;
+}
+
+.document h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-top: 40px;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--fluent-border);
+}
+
+.lead {
+    font-size: 1.15rem;
+    color: var(--fluent-text-secondary);
+    margin-bottom: 32px;
+}
+
+.document p {
+    margin-bottom: 16px;
+}
+
+/* Code Block */
+.code-block {
+    background-color: #f3f2f1;
+    border: 1px solid var(--fluent-border);
+    border-radius: var(--fluent-radius);
+    padding: 16px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+}
+
+.code-block pre {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: var(--fluent-text);
+}
+
+/* Lists */
+.fluent-list {
+    list-style: none;
+    margin-bottom: 24px;
+}
+
+.fluent-list li {
+    position: relative;
+    padding-left: 24px;
+    margin-bottom: 12px;
+}
+
+.fluent-list li::before {
+    content: "\2022";
+    color: var(--fluent-primary);
+    font-size: 1.5rem;
+    position: absolute;
+    left: 0;
+    top: -6px;
+}
+
+/* Grid layout for recipes */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 16px;
+    margin-top: 24px;
+}
+
+.card {
+    background-color: var(--fluent-surface);
+    border: 1px solid var(--fluent-border);
+    border-radius: var(--fluent-radius);
+    padding: 20px;
+    box-shadow: var(--fluent-shadow);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 3.2px 7.2px 0 rgba(0,0,0,0.132), 0 0.6px 1.8px 0 rgba(0,0,0,0.108);
+}
+
+.card h3 {
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+    color: var(--fluent-primary);
+}
+
+.card p {
+    font-size: 0.9rem;
+    color: var(--fluent-text-secondary);
+    margin-bottom: 0;
+}

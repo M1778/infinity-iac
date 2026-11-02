@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infinity-IaC Documentation</title>
+    <link rel="stylesheet" href="css/fluent-rust.css">
+</head>
+<body>
+    <div class="layout">
+        <!-- Sidebar (Rust style) -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>Infinity-IaC</h2>
+                <span class="version">v1.0.0</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="#introduction" class="active">Introduction</a></li>
+                <li><a href="#getting-started">Getting Started</a></li>
+                <li><a href="#capabilities">Capabilities</a></li>
+                <li><a href="#recipes">Built-in Recipes (131+)</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="content">
+            <header class="topbar">
+                <div class="breadcrumb">Infinity-IaC &gt; Introduction</div>
+                <div class="actions">
+                    <a href="[https://github.com/M1778/infinity-iac](https://github.com/M1778/infinity-iac)" class="btn btn-primary">GitHub</a>
+                </div>
+            </header>
+
+            <div class="document">
+                <h1 id="introduction">Infinity-IaC</h1>
+                <p class="lead">A powerful, unified Infrastructure-as-Code tool designed for seamless application deployment using cloud-init.</p>
+
+                <h2 id="getting-started">Getting Started</h2>
+                <p>Infinity-IaC allows you to quickly provision and deploy infrastructure across Oracle Cloud Infrastructure (OCI) and other providers.</p>
+                <div class="code-block">
+                    <pre><code>infinity-iac setup
+infinity-iac run --recipe nextcloud</code></pre>
+                </div>
+
+                <h2 id="capabilities">Core Capabilities</h2>
+                <ul class="fluent-list">
+                    <li><strong>Provider Agnostic Core:</strong> Designed to extend beyond OCI with standard cloud-init configurations.</li>
+                    <li><strong>Validation Preflight:</strong> Automatically validates access and permissions before provisioning.</li>
+                    <li><strong>Embedded Catalog:</strong> Shipped as a single binary with zero external dependencies.</li>
+                </ul>
+
+                <h2 id="recipes">131+ Built-in Recipes</h2>
+                <p>Deploy applications in seconds without writing configuration files. Built-in recipes include:</p>
+                <div class="card-grid">
+                    <div class="card"><h3>Nextcloud</h3><p>Self-hosted productivity platform.</p></div>
+                    <div class="card"><h3>Jellyfin</h3><p>Free Software Media System.</p></div>
+                    <div class="card"><h3>GitLab</h3><p>DevOps lifecycle tool.</p></div>
+                    <div class="card"><h3>Grafana</h3><p>Operational dashboards.</p></div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
