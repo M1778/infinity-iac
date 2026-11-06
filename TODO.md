@@ -36,15 +36,16 @@
 
 ## Built-in applications and scripts
 
-- [ ] Build and ship the planned 100+ popular application and script recipes.
-  - The current 1.0.1 embedded catalog contains only `n8n`; do not mark this
-    item complete until the catalog and release binary contain the full set.
-  - Organize recipes by stable name and version under `recipes/<name>/` and
-    embed every release recipe through `recipes/embed.go`.
-  - Cover each recipe with validation, supported provider/OS/architecture
-    metadata, resource sizing, ports and ingress requirements, idempotent
-    cloud-init steps, health checks, outputs, and cleanup guidance.
-  - Add CI checks for catalog count, duplicate names, recipe validation, and a
-    smoke test that renders each recipe's cloud-init without OCI credentials.
-  - Publish a generated catalog index so users can browse every built-in app
-    and script before provisioning anything.
+- [x] Embed the expanded 136-entry source catalog (131 application entries and five scripts).
+- [x] Mark incomplete applications as templates and reject them before provisioning.
+- [x] Improve 19 standalone demos with private bindings, persistence, protocol readiness, and container ownership checks.
+- [x] Add system, network, disk, Docker, and cloud-init diagnostic script recipes.
+- [x] Add schema, uniqueness, count, private-access, template-rejection, and generated-shell tests.
+- [x] Add offline `recipe render` for inspecting first-boot commands.
+- [ ] Complete the 112 remaining templates with supported versions and full service/configuration stacks.
+- [ ] Runtime-test both amd64 and arm64 image/platform claims before calling a recipe verified.
+- [ ] Publish a tagged release containing the catalog and autodetection fixes; source merges alone do not update installer downloads.
+- [ ] Exercise live OCI create/read/update/delete for VCNs, subnets, routes, gateways, security rules, and servers under fresh, time-bounded authorization.
+  - Read-only OCI authentication and inventory checks ran during this session.
+  - Authorized November 3 cloud-creation attempts were blocked by command-checker errors; no cloud resources were created.
+- [ ] Add a supported first-party OCI network lifecycle layer; ingress is metadata today.

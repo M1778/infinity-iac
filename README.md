@@ -1,4 +1,4 @@
-# Infinity-IaC 1.0.1
+# Infinity-IaC
 
 Infinity-IaC is a Go CLI for Oracle Cloud Infrastructure (OCI) compute
 lifecycle workflows. It creates, lists, stops, restarts, and terminates OCI
@@ -49,6 +49,11 @@ go build -trimpath -o bin/infinity-iac ./cmd/infinity-iac
 
 Put `bin/infinity-iac` on `PATH`, or use that path in the examples below.
 
+`install.sh` installs a tagged GitHub Release, not the current checkout. The
+published v1.0.1 release predates the catalog and setup fixes in this source.
+Build from source to test unreleased changes. When using sudo, use the explicit
+binary path: `sudo ./bin/infinity-iac ...` avoids an older system-wide binary.
+
 ## First OCI deployment
 
 You need an OCI tenancy, a compartment, a subnet with a public-IP policy, an
@@ -81,6 +86,14 @@ profile. It stores identifiers and the OCI profile name, but not the private
 key. Setup creates no OCI resources. The first profile becomes the default;
 later profiles can be selected with `--access` on create commands.
 
+Add `--autodetect` to find a readable OCI config and derive the selected
+profile's region and tenancy unless explicitly overridden. An explicit
+`--config` or `OCI_CONFIG_FILE` takes precedence and is not silently replaced
+if invalid. Default discovery checks the current user's config, a sudo caller's
+config when applicable, and `/root/.oci/config` when readable. Private keys are
+not copied or printed. Compartment, subnet, availability domain, image, and
+shape are still required; autodetection does not create a VCN or guess them.
+
 Create and inspect an instance:
 
 ```sh
@@ -96,38 +109,50 @@ provider minimum, so a smaller requested size is raised to 50 GB.
 
 ## Built-in app and script catalog
 
-The 1.0.1 release does **not** contain the planned 100+ popular applications
-and scripts. Its embedded catalog currently contains exactly one recipe:
+The current source embeds **136 definitions: 131 application entries and five
+scripts**. This is not a claim that 131 applications are ready to deploy. The
+catalog has 19 standalone application demos and five diagnostic scripts marked
+`experimental`. The other 112 entries are incomplete `template` recipes and
+fail before provisioning. See [the catalog guide](docs/builtin-catalog.md) for
+requirements and deployment limitations.
 
-| Name | Kind | What it does | Default resources |
-| --- | --- | --- | --- |
-| `n8n` | application | Installs Docker and starts the n8n workflow automation service | 2 vCPU, 2 GB RAM, 35 GB requested storage |
+Runnable applications default to loopback-only Docker ports, use persistent
+named volumes where state is needed, and check HTTP/database protocol readiness
+rather than just process liveness. PostgreSQL, MySQL, MariaDB, and Qdrant
+bootstrap random credentials in owner-only files on the instance. Onboarding,
+authentication, backups, and HTTPS still need review before production use.
 
-The n8n recipe uses the OCI image OCID from your access profile as its Ubuntu
-base image, installs the Ubuntu `docker.io` package, and launches
-`docker.n8n.io/n8nio/n8n` with `--restart unless-stopped`. Its default host
-port is 5678, its declared HTTP health check targets `/`, and its declared
-URL output is metadata; 1.0.1 does not yet fetch generated application output
-values from the instance.
-
-Inspect the catalog shipped by the binary:
+Inspect and render without creating cloud resources:
 
 ```sh
-infinity-iac list recipes
+infinity-iac list recipes --output json
 infinity-iac list capabilities --output json
+infinity-iac recipe render --name nginx --port 8080 > nginx-cloud-init.sh
+infinity-iac recipe render --name system-report > system-report.sh
 ```
 
-`run --app` and `run --script` both resolve names from this same validated
-recipe catalog. `run --script` is not yet a separate library of shell scripts,
-and a name that is not listed fails before an OCI instance is created. The
-catalog code supports adding more versioned YAML/JSON recipes, but those files
-must be added, validated, embedded, and tested before they become built-ins.
+After setup, provision a selected recipe:
 
-The 100+ catalog is therefore a development target, not a feature already
-present in 1.0.1. Track its implementation in the catalog roadmap in
-`TODO.md` and treat each recipe as production code: it needs a supported OCI
-image/architecture, idempotent bootstrap steps, health checks, resource
-defaults, port/security documentation, and a CI validation case.
+```sh
+infinity-iac run --recipe nginx --port 8080 --name web-demo --yes
+infinity-iac run --app postgres --name database-demo --yes
+infinity-iac run --script system-report --name diagnostics-demo --yes
+```
+
+Use exactly one of `--app`, `--script`, or `--recipe`. `run` always creates a new
+OCI instance; `recipe render` is the offline preview. Script recipes currently
+provide system, network, disk, Docker, and cloud-init reports. Access a remote
+loopback web service through SSH, for example:
+
+```sh
+ssh -N -L 8080:127.0.0.1:8080 ubuntu@INSTANCE_PUBLIC_IP
+```
+
+Validation and rendering are not runtime certification. Cloud-init success is
+recorded in `/var/lib/infinity-iac/ready/<recipe>` after bounded health checks.
+Inspect bootstrap logs and application functionality before relying on a
+service. Deleting an OCI instance deletes its boot volume and any local Docker
+volumes, so back up state separately.
 
 ## Common workflows
 

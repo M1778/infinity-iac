@@ -1,0 +1,70 @@
+{
+  "api_version": "recipe/v1",
+  "version": "1.0.0",
+  "kind": "application",
+  "supports": {
+    "providers": [
+      "oracle"
+    ],
+    "os": [
+      "ubuntu-24.04",
+      "ubuntu-22.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "name": "rundeck",
+  "description": "Runbook automation.",
+  "inputs": {
+    "port": {
+      "type": "integer",
+      "description": "Public service port.",
+      "default": 4440,
+      "min": 1,
+      "max": 65535
+    }
+  },
+  "resources": {
+    "specs": "ibase2",
+    "cpu": 2,
+    "ram_gb": 2,
+    "storage_gb": 30,
+    "ingress": [
+      {
+        "port": 4440,
+        "protocol": "tcp",
+        "source": "loopback"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "install-docker",
+      "type": "package",
+      "package": "docker.io"
+    },
+    {
+      "id": "start-rundeck",
+      "type": "command",
+      "command": "docker rm -f rundeck >/dev/null 2>&1 || true; docker run -d --restart unless-stopped --name rundeck -p 127.0.0.1:{{port}}:4440 rundeck/rundeck:latest"
+    }
+  ],
+  "health": [
+    {
+      "type": "command",
+      "command": "docker inspect -f '{{.State.Running}}' rundeck | grep -q true"
+    }
+  ],
+  "outputs": {
+    "url": {
+      "type": "string",
+      "value": "http://INSTANCE_PUBLIC_IP:{{port}}"
+    }
+  },
+  "status": "template",
+  "requirements": [
+    "Complete startup/configuration, required services, credentials, persistence, and protocol readiness before deployment. See docs/builtin-catalog.md."
+  ]
+}

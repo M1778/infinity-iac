@@ -9,6 +9,7 @@ import (
 	"os"
 	pathpkg "path"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -17,18 +18,22 @@ import (
 
 const APIVersion = "recipe/v1"
 
+var validRecipeName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
+
 type Recipe struct {
-	APIVersion  string            `json:"api_version" yaml:"api_version"`
-	Name        string            `json:"name" yaml:"name"`
-	Version     string            `json:"version" yaml:"version"`
-	Kind        string            `json:"kind" yaml:"kind"`
-	Description string            `json:"description,omitempty" yaml:"description,omitempty"`
-	Supports    Supports          `json:"supports" yaml:"supports"`
-	Inputs      map[string]Input  `json:"inputs,omitempty" yaml:"inputs,omitempty"`
-	Resources   Resources         `json:"resources" yaml:"resources"`
-	Steps       []Step            `json:"steps" yaml:"steps"`
-	Health      []HealthCheck     `json:"health,omitempty" yaml:"health,omitempty"`
-	Outputs     map[string]Output `json:"outputs,omitempty" yaml:"outputs,omitempty"`
+	APIVersion   string            `json:"api_version" yaml:"api_version"`
+	Name         string            `json:"name" yaml:"name"`
+	Version      string            `json:"version" yaml:"version"`
+	Kind         string            `json:"kind" yaml:"kind"`
+	Description  string            `json:"description,omitempty" yaml:"description,omitempty"`
+	Status       string            `json:"status,omitempty" yaml:"status,omitempty"`
+	Requirements []string          `json:"requirements,omitempty" yaml:"requirements,omitempty"`
+	Supports     Supports          `json:"supports" yaml:"supports"`
+	Inputs       map[string]Input  `json:"inputs,omitempty" yaml:"inputs,omitempty"`
+	Resources    Resources         `json:"resources" yaml:"resources"`
+	Steps        []Step            `json:"steps" yaml:"steps"`
+	Health       []HealthCheck     `json:"health,omitempty" yaml:"health,omitempty"`
+	Outputs      map[string]Output `json:"outputs,omitempty" yaml:"outputs,omitempty"`
 }
 
 type Supports struct {
@@ -107,11 +112,17 @@ func (r Recipe) Validate() error {
 	if r.APIVersion != APIVersion {
 		return fmt.Errorf("api_version must be %q", APIVersion)
 	}
-	if strings.TrimSpace(r.Name) == "" {
-		return errors.New("name is required")
+	if !validRecipeName.MatchString(r.Name) {
+		return errors.New("name must start with a letter or digit and contain only letters, digits, dots, underscores, or hyphens")
 	}
 	if strings.TrimSpace(r.Version) == "" {
 		return errors.New("version is required")
+	}
+	if r.Status != "" && r.Status != "experimental" && r.Status != "template" && r.Status != "verified" {
+		return errors.New("status must be experimental, template, or verified")
+	}
+	if r.Status == "template" && len(r.Requirements) == 0 {
+		return errors.New("template recipes must document their requirements")
 	}
 	if r.Kind != "application" && r.Kind != "script" {
 		return errors.New("kind must be application or script")

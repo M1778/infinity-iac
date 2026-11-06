@@ -1,0 +1,70 @@
+{
+  "api_version": "recipe/v1",
+  "version": "1.0.0",
+  "kind": "application",
+  "supports": {
+    "providers": [
+      "oracle"
+    ],
+    "os": [
+      "ubuntu-24.04",
+      "ubuntu-22.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "name": "mastodon",
+  "description": "Federated social network.",
+  "inputs": {
+    "port": {
+      "type": "integer",
+      "description": "Public service port.",
+      "default": 80,
+      "min": 1,
+      "max": 65535
+    }
+  },
+  "resources": {
+    "specs": "ibase2",
+    "cpu": 2,
+    "ram_gb": 2,
+    "storage_gb": 30,
+    "ingress": [
+      {
+        "port": 80,
+        "protocol": "tcp",
+        "source": "loopback"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "install-docker",
+      "type": "package",
+      "package": "docker.io"
+    },
+    {
+      "id": "start-mastodon",
+      "type": "command",
+      "command": "docker rm -f mastodon >/dev/null 2>&1 || true; docker run -d --restart unless-stopped --name mastodon -p 127.0.0.1:{{port}}:80 lscr.io/linuxserver/mastodon:latest"
+    }
+  ],
+  "health": [
+    {
+      "type": "command",
+      "command": "docker inspect -f '{{.State.Running}}' mastodon | grep -q true"
+    }
+  ],
+  "outputs": {
+    "url": {
+      "type": "string",
+      "value": "http://INSTANCE_PUBLIC_IP:{{port}}"
+    }
+  },
+  "status": "template",
+  "requirements": [
+    "Complete startup/configuration, required services, credentials, persistence, and protocol readiness before deployment. See docs/builtin-catalog.md."
+  ]
+}

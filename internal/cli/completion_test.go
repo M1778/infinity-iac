@@ -50,3 +50,19 @@ func contains(values []string, want string) bool {
 	}
 	return false
 }
+
+func TestNewRecipeAndSetupFlagsAreCompleted(t *testing.T) {
+	for _, item := range []struct {
+		words []string
+		flag  string
+	}{
+		{[]string{"run"}, "--recipe"},
+		{[]string{"recipe"}, "render"},
+		{[]string{"recipe", "render"}, "--name"},
+		{[]string{"setup", "oracle"}, "--autodetect"},
+	} {
+		if got := completionCandidates(item.words); !contains(got, item.flag) {
+			t.Fatalf("completion %v missing %s: %v", item.words, item.flag, got)
+		}
+	}
+}

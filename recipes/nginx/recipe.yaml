@@ -1,0 +1,70 @@
+{
+  "api_version": "recipe/v1",
+  "version": "1.1.0",
+  "kind": "application",
+  "supports": {
+    "providers": [
+      "oracle"
+    ],
+    "os": [
+      "ubuntu-24.04",
+      "ubuntu-22.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "name": "nginx",
+  "description": "High-performance web server.",
+  "inputs": {
+    "port": {
+      "type": "integer",
+      "description": "Loopback host port; use an SSH tunnel or an authenticated reverse proxy.",
+      "default": 80,
+      "min": 1,
+      "max": 65535
+    }
+  },
+  "resources": {
+    "specs": "ibase2",
+    "cpu": 2,
+    "ram_gb": 2,
+    "storage_gb": 30,
+    "ingress": [
+      {
+        "port": 80,
+        "protocol": "tcp",
+        "source": "loopback"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "install-docker",
+      "type": "package",
+      "package": "docker.io"
+    },
+    {
+      "id": "start-nginx",
+      "type": "command",
+      "command": "if docker inspect nginx >/dev/null 2>&1; then\n  owner=$(docker inspect -f '{{ index .Config.Labels \"infinity-iac-recipe\" }}' nginx)\n  [ \"$owner\" = nginx ] || { echo \"Refusing unowned container\" >&2; exit 1; }\n  docker rm -f nginx >/dev/null\nfi\ndocker run -d --restart unless-stopped --label infinity-iac-recipe=nginx --name nginx -p 127.0.0.1:{{port}}:80 nginx:stable-alpine",
+      "timeout_seconds": 900
+    }
+  ],
+  "health": [
+    {
+      "type": "http",
+      "port": 80,
+      "path": "/",
+      "timeout_seconds": 180
+    }
+  ],
+  "outputs": {
+    "url": {
+      "type": "string",
+      "value": "http://127.0.0.1:{{port}}"
+    }
+  },
+  "status": "experimental"
+}

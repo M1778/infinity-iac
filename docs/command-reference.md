@@ -93,6 +93,19 @@ infinity-iac setup oracle \
   --shape VM.Standard.E4.Flex --ssh-public-key "$(cat ~/.ssh/id_ed25519.pub)"
 ```
 
+`--autodetect` discovers a readable config and derives region/tenancy from the
+exact selected profile. An explicit `--config` takes precedence over
+`OCI_CONFIG_FILE`, which takes precedence over default discovery. Default
+locations are the current user's `~/.oci/config`, the sudo caller's config when
+running as root, and a readable `/root/.oci/config`. A missing explicit file or
+profile fails instead of falling back silently. Compartment, subnet,
+availability domain, image, and shape still have to be supplied. No network
+resources are created by setup.
+
+Use the source-built binary by its full path under sudo to avoid invoking an
+older `/usr/bin/infinity-iac`. User and root installations/configuration files
+are separate.
+
 ### `list acc`
 
 Lists configured access profiles. Use `--output json` for automation.
@@ -148,10 +161,11 @@ infinity-iac list instances --output json
 
 ### `list recipes`
 
-Lists the validated built-in recipe catalog. In 1.0.1 this catalog contains
-exactly `n8n`; the planned 100+ application and script catalog is not shipped
-yet. Set `INFINITY_IAC_RECIPES` or use `--root` to inspect a filesystem catalog
-during development.
+Lists the validated source catalog: 136 definitions, including 131 application
+entries and five scripts. Status and requirements distinguish the 19 application
+demos from 112 incomplete templates. The v1.0.1 published binary predates this
+expansion. Set `INFINITY_IAC_RECIPES` or use `--root` to inspect a
+filesystem catalog during development.
 
 ```sh
 infinity-iac list recipes
@@ -170,14 +184,29 @@ infinity-iac validate recipe --file recipes/n8n/recipe.yaml
 for this command. `list capabilities` reports the provider, operating system,
 and architecture metadata from the same catalog.
 
+### `recipe render`
+
+Renders a runnable recipe to shell without contacting OCI or executing it:
+
+```sh
+infinity-iac recipe render --name nginx --port 8080 > bootstrap.sh
+infinity-iac recipe render --file ./recipe.yaml > bootstrap.sh
+```
+
+Exactly one of `--name` or `--file` is required. Command-step timeouts, bounded
+health probes, lock serialization, and a success marker are included. Review
+third-party scripts before executing them. Templates cannot be rendered until
+their requirements are implemented.
+
 ### Built-in catalog status
 
 The source of truth for built-ins is `recipes/`, and `recipes/embed.go` embeds
-the selected files into release binaries. The current tree has one file:
-`recipes/n8n/recipe.yaml`. There are no built-in Docker, Kubernetes, database,
-monitoring, security, backup, networking, or general-purpose script recipes in
-1.0.1. A filesystem recipe found through `--root` or `INFINITY_IAC_RECIPES` is
-an external catalog entry and is not part of the release.
+all `*/recipe.yaml` files into source-built binaries. The current tree contains
+131 application definitions and five scripts; schema validation is not runtime
+verification. Incomplete templates are listed but blocked from rendering or
+provisioning. A filesystem recipe found through `--root` or
+`INFINITY_IAC_RECIPES` is an external catalog entry and is not part of the
+release.
 
 The n8n built-in is an application recipe, not a prebuilt OCI image. OCI boots
 the image OCID saved in the access profile; cloud-init then installs `docker.io`
@@ -208,10 +237,11 @@ instance.
 infinity-iac run --app n8n --specs auto --port 1080 --startup-script ./start.sh --yes
 ```
 
-The only built-in invocation in 1.0.1 is `infinity-iac run --app n8n`. No
-built-in script recipe exists yet. Both `--app` and `--script` currently
-select a recipe by name; they do not enforce the recipe's `kind` field. Use
-`validate recipe` with a custom catalog while developing additional recipes.
+Use exactly one of `--app`, `--script`, or the `--recipe` alias. All select a
+catalog name and do not enforce its kind. Conflicting selectors, unknown names,
+and incomplete templates are rejected before provider creation. Script recipes
+also provision a new instance; they are not an existing-server execution API.
+The command returns on OCI launch acceptance, not application readiness.
 
 ### `plan` and `apply`
 
@@ -284,8 +314,11 @@ Recipe discovery uses this precedence:
 
 1. `--root PATH` on `list recipes` or `list capabilities`.
 2. `INFINITY_IAC_RECIPES`.
-3. A repository `recipes/` directory when running from a checkout.
-4. The catalog embedded in the release binary.
+3. The catalog embedded in the binary.
+
+Locally installed recipes are appended unless an explicit root/environment
+catalog is selected. The current working directory no longer implicitly
+replaces the embedded catalog.
 
 ## Output, confirmation, and errors
 

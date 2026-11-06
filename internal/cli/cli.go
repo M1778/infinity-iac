@@ -3,7 +3,6 @@ package cli
 import (
 	"bufio"
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -112,7 +111,7 @@ func (a *App) completion(args []string) int {
 
 func (a *App) setup(args []string) int {
 	if len(args) == 0 || args[0] == "help" {
-		fmt.Fprintln(a.out, "usage: setup oracle --compartment OCID --subnet OCID --availability-domain AD --image OCID --shape SHAPE [--name NAME] [--profile PROFILE] [--region REGION] [--config PATH] [--ssh-public-key KEY]")
+		fmt.Fprintln(a.out, "usage: setup oracle --compartment OCID --subnet OCID --availability-domain AD --image OCID --shape SHAPE [--name NAME] [--profile PROFILE] [--region REGION] [--config PATH] [--autodetect] [--ssh-public-key KEY]")
 		return 0
 	}
 	if args[0] != "oracle" {
@@ -136,17 +135,16 @@ func (a *App) setup(args []string) int {
 		return 2
 	}
 	if *autodetect {
-		paths := []string{os.Getenv("OCI_CONFIG_FILE"), "/root/.oci/config"}
-		if home, err := os.UserHomeDir(); err == nil {
-			paths = append(paths, filepath.Join(home, ".oci", "config"))
+		metadata, err := provider.DetectOCIConfiguration(*configFile, *profile)
+		if err != nil {
+			return a.fail("autodetect OCI config: " + err.Error())
 		}
-		for _, p := range paths {
-			if p != "" {
-				if _, err := os.Stat(p); err == nil {
-					*configFile = p
-					break
-				}
-			}
+		*configFile = metadata.Path
+		if *region == "" && os.Getenv("OCI_REGION") == "" {
+			*region = metadata.Region
+		}
+		if *account == "" {
+			*account = metadata.TenancyID
 		}
 	}
 	if *name == "" {
@@ -303,10 +301,12 @@ func (a *App) list(args []string) int {
 }
 
 type recipeSummary struct {
-	Name        string `json:"name"`
-	Version     string `json:"version"`
-	Kind        string `json:"kind"`
-	Description string `json:"description,omitempty"`
+	Name         string   `json:"name"`
+	Version      string   `json:"version"`
+	Kind         string   `json:"kind"`
+	Description  string   `json:"description,omitempty"`
+	Status       string   `json:"status,omitempty"`
+	Requirements []string `json:"requirements,omitempty"`
 }
 
 func (a *App) listRecipes(args []string) int {
@@ -321,7 +321,7 @@ func (a *App) listRecipes(args []string) int {
 	}
 	summaries := make([]recipeSummary, 0, len(items))
 	for _, item := range items {
-		summaries = append(summaries, recipeSummary{Name: item.Name, Version: item.Version, Kind: item.Kind, Description: item.Description})
+		summaries = append(summaries, recipeSummary{Name: item.Name, Version: item.Version, Kind: item.Kind, Description: item.Description, Status: item.Status, Requirements: item.Requirements})
 	}
 	if mode == "json" {
 		return a.emit(map[string]any{"source": source, "recipes": summaries}, nil)
@@ -330,9 +330,9 @@ func (a *App) listRecipes(args []string) int {
 		fmt.Fprintln(a.out, "no recipes")
 		return 0
 	}
-	fmt.Fprintln(a.out, "NAME\tVERSION\tKIND\tDESCRIPTION")
+	fmt.Fprintln(a.out, "NAME\tVERSION\tKIND\tSTATUS\tDESCRIPTION")
 	for _, item := range summaries {
-		fmt.Fprintf(a.out, "%s\t%s\t%s\t%s\n", item.Name, item.Version, item.Kind, item.Description)
+		fmt.Fprintf(a.out, "%s\t%s\t%s\t%s\t%s\n", item.Name, item.Version, item.Kind, item.Status, item.Description)
 	}
 	return 0
 }
@@ -345,7 +345,7 @@ func (a *App) listCapabilities(args []string) int {
 	}
 	capabilities := make([]map[string]any, 0, len(items))
 	for _, item := range items {
-		capabilities = append(capabilities, map[string]any{"name": item.Name, "kind": item.Kind, "providers": item.Supports.Providers, "os": item.Supports.OS, "architectures": item.Supports.Architectures})
+		capabilities = append(capabilities, map[string]any{"name": item.Name, "kind": item.Kind, "providers": item.Supports.Providers, "os": item.Supports.OS, "architectures": item.Supports.Architectures, "status": item.Status, "requirements": item.Requirements})
 	}
 	mode, err := outputMode(args)
 	if err != nil {
@@ -362,7 +362,7 @@ func (a *App) listCapabilities(args []string) int {
 
 func (a *App) recipe(args []string) int {
 	if len(args) == 0 || args[0] == "help" {
-		fmt.Fprintln(a.out, "usage: recipe list|validate ...")
+		fmt.Fprintln(a.out, "usage: recipe list|validate|render ...")
 		return 0
 	}
 	switch args[0] {
@@ -370,6 +370,8 @@ func (a *App) recipe(args []string) int {
 		return a.listRecipes(args[1:])
 	case "validate":
 		return a.validateRecipe(args[1:])
+	case "render":
+		return a.renderRecipe(args[1:])
 	default:
 		return a.fail("unknown recipe action " + args[0])
 	}
@@ -420,9 +422,6 @@ func loadRecipes(root string) ([]recipe.Recipe, string, error) {
 		items, err = recipe.Discover(source)
 	case os.Getenv("INFINITY_IAC_RECIPES") != "":
 		source = os.Getenv("INFINITY_IAC_RECIPES")
-		items, err = recipe.Discover(source)
-	case func() bool { _, statErr := os.Stat("recipes"); return statErr == nil }():
-		source = "recipes"
 		items, err = recipe.Discover(source)
 	default:
 		source = "builtin"
@@ -636,7 +635,7 @@ func (a *App) createServer(args []string, kind string, userData ...string) int {
 
 func (a *App) run(args []string) int {
 	if len(args) == 0 || args[0] == "help" {
-		fmt.Fprintln(a.out, "usage: run --app NAME [--specs auto] [--port N] [--startup-script PATH] [--yes]")
+		fmt.Fprintln(a.out, "usage: run --app NAME|--script NAME|--recipe NAME [--specs auto] [--port N] [--startup-script PATH] [--yes]")
 		return 0
 	}
 	fs := flag.NewFlagSet("run", flag.ContinueOnError)
@@ -653,8 +652,14 @@ func (a *App) run(args []string) int {
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
-	if *app == "" && *script == "" {
-		return a.fail("run requires --app or --script")
+	selectors := 0
+	for _, value := range []string{*app, *script, *recipe} {
+		if value != "" {
+			selectors++
+		}
+	}
+	if selectors != 1 || fs.NArg() != 0 {
+		return a.fail("run requires exactly one of --app, --script, or --recipe")
 	}
 	target := *app
 	if target == "" {
@@ -734,66 +739,8 @@ func recipeResources(item recipe.Recipe) (cpu, ram, storage int) {
 	return cpu, ram, storage
 }
 
-// recipeCloudInit turns validated recipe steps into a real cloud-init shell
-// script. The script is sent as OCI user_data and runs on first boot.
 func recipeCloudInit(item recipe.Recipe, port int) (string, error) {
-	var b strings.Builder
-	b.WriteString("#!/bin/bash\nset -eu\n")
-	for _, step := range item.Steps {
-		switch step.Type {
-		case "package":
-			if strings.TrimSpace(step.Package) == "" {
-				return "", fmt.Errorf("step %q has an empty package", step.ID)
-			}
-			b.WriteString("export DEBIAN_FRONTEND=noninteractive\napt-get update\napt-get install -y -- " + shellQuote(step.Package) + "\n")
-		case "command":
-			command := strings.ReplaceAll(step.Command, "{{port}}", strconv.Itoa(port))
-			b.WriteString(command)
-			b.WriteByte('\n')
-		case "upload":
-			data, err := os.ReadFile(step.Source)
-			if err != nil {
-				return "", fmt.Errorf("read upload source %q for step %q: %w", step.Source, step.ID, err)
-			}
-			b.WriteString("install -d -- " + shellQuote(filepath.Dir(step.Destination)) + "\n")
-			b.WriteString("echo " + shellQuote(base64.StdEncoding.EncodeToString(data)) + " | base64 -d > " + shellQuote(step.Destination) + "\n")
-		default:
-			return "", fmt.Errorf("step %q has unsupported type %q", step.ID, step.Type)
-		}
-	}
-	for _, check := range item.Health {
-		switch check.Type {
-		case "command":
-			b.WriteString(strings.ReplaceAll(check.Command, "{{port}}", strconv.Itoa(port)))
-			b.WriteByte('\n')
-		case "http":
-			path := check.Path
-			if !strings.HasPrefix(path, "/") {
-				path = "/" + path
-			}
-			b.WriteString("command -v curl >/dev/null 2>&1 || (apt-get update && apt-get install -y -- curl)\n")
-			healthPort := check.Port
-			if port > 0 {
-				healthPort = port
-			}
-			url := "http://127.0.0.1:" + strconv.Itoa(healthPort) + path
-			b.WriteString("curl --fail --silent --show-error --retry 10 --retry-delay 5 --max-time " + strconv.Itoa(maxHealthTimeout(check.TimeoutSeconds)) + " " + shellQuote(url) + " >/dev/null\n")
-		default:
-			return "", fmt.Errorf("health check has unsupported type %q", check.Type)
-		}
-	}
-	return b.String(), nil
-}
-
-func maxHealthTimeout(value int) int {
-	if value < 1 {
-		return 120
-	}
-	return value
-}
-
-func shellQuote(value string) string {
-	return "'" + strings.ReplaceAll(value, "'", "'\"'\"'") + "'"
+	return recipe.RenderCloudInit(item, port)
 }
 
 func (a *App) instance(args []string) int {

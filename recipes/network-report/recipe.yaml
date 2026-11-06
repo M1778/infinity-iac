@@ -1,0 +1,34 @@
+{
+  "api_version": "recipe/v1",
+  "name": "network-report",
+  "version": "1.0.0",
+  "kind": "script",
+  "status": "experimental",
+  "description": "Read-only interface, route, resolver, and listening port diagnostics.",
+  "supports": {
+    "providers": [
+      "oracle"
+    ],
+    "os": [
+      "ubuntu-24.04",
+      "ubuntu-22.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "resources": {
+    "cpu": 1,
+    "ram_gb": 1,
+    "storage_gb": 30
+  },
+  "steps": [
+    {
+      "id": "report",
+      "type": "command",
+      "command": "ip -brief address\nip route\ncat /etc/resolv.conf\nss -lntup",
+      "timeout_seconds": 60
+    }
+  ]
+}

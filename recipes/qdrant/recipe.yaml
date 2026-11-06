@@ -1,0 +1,84 @@
+{
+  "api_version": "recipe/v1",
+  "version": "1.1.0",
+  "kind": "application",
+  "supports": {
+    "providers": [
+      "oracle"
+    ],
+    "os": [
+      "ubuntu-24.04",
+      "ubuntu-22.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "name": "qdrant",
+  "description": "Vector similarity database.",
+  "inputs": {
+    "port": {
+      "type": "integer",
+      "description": "Loopback host port; use an SSH tunnel or an authenticated reverse proxy.",
+      "default": 6333,
+      "min": 1,
+      "max": 65535
+    }
+  },
+  "resources": {
+    "specs": "ibase2",
+    "cpu": 2,
+    "ram_gb": 2,
+    "storage_gb": 30,
+    "ingress": [
+      {
+        "port": 6333,
+        "protocol": "tcp",
+        "source": "loopback"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "install-docker",
+      "type": "package",
+      "package": "docker.io"
+    },
+    {
+      "id": "install-openssl",
+      "type": "package",
+      "package": "openssl"
+    },
+    {
+      "id": "install-curl",
+      "type": "package",
+      "package": "curl"
+    },
+    {
+      "id": "start-qdrant",
+      "type": "command",
+      "command": "umask 077\ninstall -d -m 0700 /var/lib/infinity-iac/qdrant\nif [ ! -s /var/lib/infinity-iac/qdrant/credentials.env ]; then\n  printf 'QDRANT__SERVICE__API_KEY=%s\\n' \"$(openssl rand -hex 24)\" > /var/lib/infinity-iac/qdrant/credentials.env.tmp\n  mv /var/lib/infinity-iac/qdrant/credentials.env.tmp /var/lib/infinity-iac/qdrant/credentials.env\nfi\nchmod 0600 /var/lib/infinity-iac/qdrant/credentials.env\nif docker volume inspect infinity-qdrant-data >/dev/null 2>&1; then\n  owner=$(docker volume inspect -f '{{ index .Labels \"infinity-iac-recipe\" }}' infinity-qdrant-data)\n  [ \"$owner\" = qdrant ] || { echo \"Refusing unowned volume\" >&2; exit 1; }\nelse\n  docker volume create --label infinity-iac-recipe=qdrant infinity-qdrant-data >/dev/null\nfi\nif docker inspect qdrant >/dev/null 2>&1; then\n  owner=$(docker inspect -f '{{ index .Config.Labels \"infinity-iac-recipe\" }}' qdrant)\n  [ \"$owner\" = qdrant ] || { echo \"Refusing unowned container\" >&2; exit 1; }\n  docker rm -f qdrant >/dev/null\nfi\ndocker run -d --restart unless-stopped --name qdrant --label infinity-iac-recipe=qdrant --env-file /var/lib/infinity-iac/qdrant/credentials.env -v infinity-qdrant-data:/qdrant/storage -p 127.0.0.1:{{port}}:6333 qdrant/qdrant:latest",
+      "timeout_seconds": 900
+    }
+  ],
+  "health": [
+    {
+      "type": "command",
+      "command": ". /var/lib/infinity-iac/qdrant/credentials.env\ncurl --fail --silent --show-error --max-time 10 -H \"api-key: $QDRANT__SERVICE__API_KEY\" http://127.0.0.1:{{port}}/readyz",
+      "timeout_seconds": 180
+    }
+  ],
+  "outputs": {
+    "url": {
+      "type": "string",
+      "value": "http://127.0.0.1:{{port}}"
+    },
+    "credentials_file": {
+      "type": "string",
+      "value": "/var/lib/infinity-iac/qdrant/credentials.env",
+      "sensitive": true
+    }
+  },
+  "status": "experimental"
+}

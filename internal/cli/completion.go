@@ -32,11 +32,18 @@ func completionCandidates(words []string) []string {
 	command := words[0]
 	if len(words) > 1 {
 		switch command {
+		case "setup":
+			if words[1] == "oracle" {
+				return []string{"--autodetect", "--name", "--profile", "--account", "--config", "--region", "--compartment", "--subnet", "--availability-domain", "--image", "--shape", "--ssh-public-key", "help"}
+			}
 		case "list":
 			if words[1] == "recipes" || words[1] == "capabilities" {
 				return []string{"--root", "--output", "--output=json", "help"}
 			}
 		case "recipe":
+			if words[1] == "render" {
+				return []string{"--name", "--file", "--port", "help"}
+			}
 			if words[1] == "validate" {
 				return []string{"--file", "--output", "--output=json", "help"}
 			}
@@ -58,13 +65,13 @@ func completionCandidates(words []string) []string {
 	case "list":
 		return []string{"acc", "access", "instances", "recipes", "capabilities", "help", "--output", "--output=json"}
 	case "recipe":
-		return []string{"list", "validate", "help"}
+		return []string{"list", "validate", "render", "help"}
 	case "validate":
 		return []string{"recipe", "help"}
 	case "create":
 		return []string{"server", "sandbox", "network", "help"}
 	case "run":
-		return []string{"--app", "--script", "--specs", "--port", "--name", "--startup-script", "--yes", "--output", "help"}
+		return []string{"--app", "--script", "--recipe", "--specs", "--port", "--name", "--startup-script", "--yes", "--output", "help"}
 	case "instance":
 		return []string{"stop", "restart", "delete", "help"}
 	case "network":
