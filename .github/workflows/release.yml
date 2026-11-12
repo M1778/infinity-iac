@@ -5,7 +5,7 @@ on:
     tags: ['v*.*.*']
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release-${{ github.ref }}
@@ -40,6 +40,15 @@ jobs:
           go-version: '1.24.x'
           cache: true
 
+      - name: Verify release source
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test "$(go run ./cmd/infinity-iac --version)" = "$version"
+          go vet ./...
+          go test ./...
+
       - name: Build release binary
         env:
           GOOS: ${{ matrix.goos }}
@@ -50,7 +59,11 @@ jobs:
           mkdir -p dist
           ext=""
           if [ "$GOOS" = "windows" ]; then ext=".exe"; fi
-          go build -trimpath -ldflags="-s -w" -o "dist/infinity-iac_${GOOS}_${GOARCH}${ext}" ./cmd/infinity-iac
+          version="${GITHUB_REF_NAME#v}"
+          go build -trimpath -ldflags="-s -w -X github.com/M1778/infinity-iac/internal/cli.Version=$version" -o "dist/infinity-iac_${GOOS}_${GOARCH}${ext}" ./cmd/infinity-iac
+          if [ "$GOOS/$GOARCH" = "linux/amd64" ]; then
+            test "$(./dist/infinity-iac_linux_amd64 --version)" = "$version"
+          fi
           if [ "$GOOS" = "windows" ]; then
             sha256sum "dist/infinity-iac_${GOOS}_${GOARCH}${ext}" > "dist/infinity-iac_${GOOS}_${GOARCH}.sha256"
           fi
@@ -64,6 +77,8 @@ jobs:
   publish:
     name: Publish GitHub release
     needs: [build, windows-installer]
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - name: Check out installer sources
@@ -75,6 +90,10 @@ jobs:
           pattern: release-*
           path: dist
           merge-multiple: true
+
+      - name: Prepare Unix binaries
+        shell: bash
+        run: chmod 0755 dist/infinity-iac_linux_* dist/infinity-iac_darwin_*
 
       - name: Add Unix installer
         shell: bash
@@ -93,7 +112,7 @@ jobs:
         run: sha256sum * > SHA256SUMS
 
       - name: Verify release artifacts
-        run: ./scripts/verify-release.sh dist
+        run: ./scripts/verify-release.sh dist "${GITHUB_REF_NAME#v}"
 
       - name: Publish release
         env:
@@ -122,6 +141,9 @@ jobs:
           $expected = (Get-Content 'dist/infinity-iac_windows_amd64.sha256').Split()[0].ToLowerInvariant()
           $actual = (Get-FileHash $binary.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($actual -ne $expected) { throw "Windows binary checksum verification failed" }
+          $version = ${env:GITHUB_REF_NAME}.TrimStart('v')
+          $reported = & 'dist/infinity-iac_windows_amd64.exe' --version
+          if ($LASTEXITCODE -ne 0 -or $reported.Trim() -ne $version) { throw "Windows binary version does not match release tag" }
 
       - name: Install Inno Setup
         shell: pwsh

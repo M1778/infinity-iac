@@ -1,6 +1,6 @@
 {
   "api_version": "recipe/v1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "kind": "application",
   "supports": {
     "providers": [
@@ -11,8 +11,7 @@
       "ubuntu-22.04"
     ],
     "architectures": [
-      "amd64",
-      "arm64"
+      "amd64"
     ]
   },
   "name": "wallabag",
@@ -20,20 +19,20 @@
   "inputs": {
     "port": {
       "type": "integer",
-      "description": "Public service port.",
-      "default": 80,
+      "description": "Loopback host port; connect through an SSH tunnel or an authenticated reverse proxy.",
+      "default": 8080,
       "min": 1,
       "max": 65535
     }
   },
   "resources": {
-    "specs": "ibase2",
+    "specs": "auto",
     "cpu": 2,
-    "ram_gb": 2,
+    "ram_gb": 3,
     "storage_gb": 30,
     "ingress": [
       {
-        "port": 80,
+        "port": 8080,
         "protocol": "tcp",
         "source": "loopback"
       }
@@ -46,25 +45,38 @@
       "package": "docker.io"
     },
     {
-      "id": "start-wallabag",
+      "id": "install-openssl",
+      "type": "package",
+      "package": "openssl"
+    },
+    {
+      "id": "start-wallabag-stack",
       "type": "command",
-      "command": "docker rm -f wallabag >/dev/null 2>&1 || true; docker run -d --restart unless-stopped --name wallabag -p 127.0.0.1:{{port}}:80 wallabag/wallabag:latest"
+      "command": "recipe='wallabag'\nowned_volume() {\n  if docker volume inspect \"$1\" >/dev/null 2>&1; then\n    owner=$(docker volume inspect -f '{{ index .Labels \"infinity-iac-recipe\" }}' \"$1\")\n    [ \"$owner\" = \"$recipe\" ] || { printf '%s\\n' 'Refusing unowned volume' >&2; exit 1; }\n  else\n    docker volume create --label \"infinity-iac-recipe=$recipe\" \"$1\" >/dev/null\n  fi\n}\nowned_network() {\n  if docker network inspect \"$1\" >/dev/null 2>&1; then\n    owner=$(docker network inspect -f '{{ index .Labels \"infinity-iac-recipe\" }}' \"$1\")\n    [ \"$owner\" = \"$recipe\" ] || { printf '%s\\n' 'Refusing unowned network' >&2; exit 1; }\n  else\n    docker network create --label \"infinity-iac-recipe=$recipe\" \"$1\" >/dev/null\n  fi\n}\nreplace_container() {\n  if docker inspect \"$1\" >/dev/null 2>&1; then\n    owner=$(docker inspect -f '{{ index .Config.Labels \"infinity-iac-recipe\" }}' \"$1\")\n    [ \"$owner\" = \"$recipe\" ] || { printf '%s\\n' 'Refusing unowned container' >&2; exit 1; }\n    docker rm -f \"$1\" >/dev/null\n  fi\n}\nwait_for() {\n  local deadline=$((SECONDS + 180))\n  until \"$@\" >/dev/null 2>&1; do\n    (( SECONDS < deadline )) || { printf '%s\\n' 'Dependency readiness timed out' >&2; exit 1; }\n    sleep 3\n  done\n}\nowned_network infinity-wallabag-network\nowned_volume infinity-wallabag-database\nowned_volume infinity-wallabag-images\ninstall -d -m 0700 /var/lib/infinity-iac/wallabag\ncredentials=/var/lib/infinity-iac/wallabag/credentials.env\ntest ! -L \"$credentials\"\nif [ ! -e \"$credentials\" ]; then\n  umask 077\n  tmp=$(mktemp \"${credentials}.XXXXXX\")\n  trap 'rm -f -- \"$tmp\"' EXIT\n  printf '%s=%s\\n' 'POSTGRES_USER' \"infinity\" >> \"$tmp\"\n  printf '%s=%s\\n' 'POSTGRES_DB' \"infinity\" >> \"$tmp\"\n  printf '%s=%s\\n' 'POSTGRES_PASSWORD' \"$(openssl rand -hex 32)\" >> \"$tmp\"\n  chmod 0600 \"$tmp\"\n  mv -- \"$tmp\" \"$credentials\"\n  trap - EXIT\nfi\nchmod 0600 \"$credentials\"\nset -a\n. \"$credentials\"\nset +a\nreplace_container wallabag\nreplace_container infinity-wallabag-db\ndocker run -d --restart unless-stopped --label infinity-iac-recipe=wallabag --name infinity-wallabag-db --network infinity-wallabag-network -v infinity-wallabag-database:/var/lib/postgresql/data --env-file \"$credentials\" postgres:16-alpine\nwait_for docker exec infinity-wallabag-db sh -ec 'PGPASSWORD=\"$POSTGRES_PASSWORD\" psql -h 127.0.0.1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -Atqc \"SELECT 1\"'\ndocker run -d --restart unless-stopped --label infinity-iac-recipe=wallabag --name wallabag --network infinity-wallabag-network -v infinity-wallabag-images:/var/www/wallabag/web/assets/images -e POSTGRESQL_ROOT_PASSWORD=\"$POSTGRES_PASSWORD\" -e SYMFONY__ENV__DATABASE_DRIVER=\"pdo_pgsql\" -e SYMFONY__ENV__DATABASE_HOST=\"infinity-wallabag-db\" -e SYMFONY__ENV__DATABASE_PORT=\"5432\" -e SYMFONY__ENV__DATABASE_NAME=\"$POSTGRES_DB\" -e SYMFONY__ENV__DATABASE_USER=\"$POSTGRES_USER\" -e SYMFONY__ENV__DATABASE_PASSWORD=\"$POSTGRES_PASSWORD\" -e SYMFONY__ENV__DOMAIN_NAME=\"http://localhost:{{port}}\" -p 127.0.0.1:{{port}}:80 wallabag/wallabag:latest\n",
+      "timeout_seconds": 1500
     }
   ],
   "health": [
     {
-      "type": "command",
-      "command": "docker inspect -f '{{.State.Running}}' wallabag | grep -q true"
+      "type": "http",
+      "port": 8080,
+      "path": "/",
+      "timeout_seconds": 300
     }
   ],
   "outputs": {
     "url": {
       "type": "string",
-      "value": "http://INSTANCE_PUBLIC_IP:{{port}}"
+      "value": "http://127.0.0.1:{{port}}"
+    },
+    "credentials_file": {
+      "type": "string",
+      "value": "/var/lib/infinity-iac/wallabag/credentials.env",
+      "sensitive": true
     }
   },
-  "status": "template",
+  "status": "experimental",
   "requirements": [
-    "Complete startup/configuration, required services, credentials, persistence, and protocol readiness before deployment. See docs/builtin-catalog.md."
+    "Database and captured images persist privately; change upstream starter login credentials immediately through the SSH tunnel. Configure public URL/TLS/email before publication."
   ]
 }

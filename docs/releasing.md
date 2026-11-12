@@ -1,76 +1,76 @@
 # Releasing Infinity-IaC
 
-This guide is for repository maintainers. Releases are tag-driven and are
-published by `.github/workflows/release.yml`.
+Releases use `.github/workflows/release.yml` and `v*.*.*` tags. A source merge
+alone does not publish installer assets. Never move a published tag or bypass
+protected checks.
 
 ## Before tagging
 
-Run the same checks used by CI and verify the version constant in
-`internal/cli/cli.go`:
+Run the complete local checks from a clean reviewed checkout:
 
 ```sh
-make fmt-check
-make vet
-make test-race
-make validate-recipes
-make build
+make fmt-check vet test-race validate-recipes build
+go run ./cmd/docs-data --check
+npm ci --ignore-scripts
+npx --no-install playwright install --with-deps chromium
+npm run test:docs
 sh -n install.sh scripts/verify-release.sh
 git diff --check
+./bin/infinity-iac --version
 ```
 
-For a local production credential check, set the read-only integration variables
-from a shell or secret manager and run:
+The source/default `internal/cli.Version` must match the tag without its `v`.
+Release jobs check source version, test/vet, inject the tag version into every
+binary, and verify native Linux and Windows reports. Formatting includes the
+public root package, not just internal directories.
+
+Review the final diff for secrets. Do not commit OCI config, private keys,
+application input secrets, raw live logs, cloud journals, local harness settings,
+node_modules, or temporary tests. Runtime counts and blocked tests must be
+reported honestly in catalog docs/notes.
+
+## Live checks are opt-in
+
+Read-only credential tests use `INFINITY_IAC_OCI_INTEGRATION=1` or
+`INFINITY_IAC_OCI_AUTH_TEST=1` and the documented local OCI profile/resource
+variables. They never create cloud resources.
+
+`scripts/live-test.py` is an explicitly billable, opt-in test using a fresh private
+workspace, standard local SDK/config, a separate managed test access name, and
+exact-resource cleanup. It requires `INFINITY_IAC_LIVE_TEST=1` and `--yes`,
+explicit image/domain/SSH source, bounded deadline, and a independently tested
+cleanup path before allocation. Prepare/check the journal and arm an approved
+cleanup fallback. Never enable it in ordinary CI or target personal resources.
+The Python OCI SDK and SSH utilities must already be installed for this test.
+
+If allocation fails with quota/auth/invalid configuration, stop. Do not switch
+to personal resources, retry a service-limit fault indefinitely, or report guest
+lifecycle as tested. Verify cleanup and preserve private evidence.
+
+## PR and tag publication
+
+1. Commit reviewed project files only and push the feature branch.
+2. Open a PR and pass Linux/macOS/Windows and documentation checks.
+3. Merge through protection and wait for master CI and Pages validation.
+4. Create a new semver tag on the exact verified merge commit, then push it.
+
+For the 1.1.0 source, after the merge is verified:
 
 ```sh
-export INFINITY_IAC_OCI_INTEGRATION=1
-export INFINITY_IAC_OCI_PROFILE=DEFAULT
-export INFINITY_IAC_OCI_CONFIG="$HOME/.oci/config" # optional
-export INFINITY_IAC_OCI_REGION=us-phoenix-1
-export INFINITY_IAC_OCI_COMPARTMENT=ocid1.compartment.oc1..example
-export INFINITY_IAC_OCI_SUBNET=ocid1.subnet.oc1..example
-export INFINITY_IAC_OCI_AVAILABILITY_DOMAIN=PHX-AD-1
-export INFINITY_IAC_OCI_IMAGE=ocid1.image.oc1..example
-export INFINITY_IAC_OCI_SHAPE=VM.Standard.E4.Flex
-make test-oci-integration
-```
-
-This test reads the OCI private key referenced by the local config and performs
-only compartment, subnet, image, availability-domain, and instance-list reads.
-It never creates or deletes an instance. Do not put the OCI config or private
-key in the repository, CI logs, or issue comments.
-
-Update user-facing release notes and `TODO.md` as needed. Do not put OCI
-private keys or other credentials in the repository or GitHub Actions
-variables.
-
-## Publish a release
-
-Create a semver tag and push it to `master`:
-
-```sh
-git tag v1.0.1
-git push origin v1.0.1
-```
-
-The workflow runs on tags matching `v*.*.*` and performs these stages:
-
-1. Cross-compiles Linux amd64/arm64, macOS amd64/arm64, and Windows amd64
-   binaries with `CGO_ENABLED=0`.
-2. Verifies the Windows binary before passing it to Inno Setup.
-3. Builds `infinity-iac-setup.exe` for per-user Windows installation.
-4. Adds the Unix `install.sh` script and creates a deterministic `SHA256SUMS`.
-5. Runs `scripts/verify-release.sh` against every required asset.
-6. Creates the GitHub Release with generated notes and all release assets.
-
-Monitor the run and release with GitHub CLI:
-
-```sh
+git tag v1.1.0 VERIFIED_MERGE_COMMIT
+git push origin v1.1.0
 gh run list --workflow release.yml --limit 5
-gh run watch RUN_ID
-gh release view v1.0.1
+gh run watch RUN_ID --exit-status
+gh release view v1.1.0
 ```
 
-The release must contain these assets:
+Build/package jobs have read-only repository access; publication alone receives
+contents write. Pages write/ID-token permissions belong only to deployment,
+not browser tests. Do not store OCI secrets in GitHub workflows.
+
+## Assets and fresh installation
+
+The workflow produces:
 
 ```text
 infinity-iac_linux_amd64
@@ -83,34 +83,43 @@ install.sh
 SHA256SUMS
 ```
 
-## Verify installation URLs
-
-After publication, test the exact assets referenced by the installer:
-
-```sh
-curl -fsSI https://github.com/M1778/infinity-iac/releases/download/v1.0.1/infinity-iac_linux_amd64
-curl -fsSI https://github.com/M1778/infinity-iac/releases/latest/download/SHA256SUMS
-```
-
-Use a clean temporary prefix for an end-to-end Unix installer check:
+Checksums cover every required binary/installer. Before publishing, the verifier
+checks native version as well as content. After publication, download the exact
+tag assets, run checksum verification, and test a clean temporary install prefix:
 
 ```sh
 tmp_prefix="$(mktemp -d)"
-curl -fsSL https://raw.githubusercontent.com/M1778/infinity-iac/master/install.sh \
-  | sh -s -- --version v1.0.1 --prefix "$tmp_prefix"
-"$tmp_prefix/infinity-iac" version
-rm -rf "$tmp_prefix"
+sh install.sh --version v1.1.0 --prefix "$tmp_prefix"
+"$tmp_prefix/infinity-iac" --version
+"$tmp_prefix/infinity-iac" list recipes --output json
+"$tmp_prefix/infinity-iac" recipe render --name oc-hunter
 ```
 
-Windows installation should be checked on a clean user profile. Confirm that
-the binary launches, the optional user `PATH` entry works in a new shell, and
-uninstall removes only the path entry managed by the installer.
+Expected version is `1.1.0`, with the documented embedded inventory and commands.
+Do not replace a working system-wide executable until fresh installation passes.
+Windows installation/uninstallation additionally needs a clean user-profile
+check; successful cross-compilation or Inno packaging is not that check.
 
-## Go package publication
+Open the actual Pages URL after deployment and check mobile/desktop, themes,
+keyboard/menu/filter/copy behavior and source links, not merely the upload job.
 
-The repository is a Go module, but the current public surface is the CLI. The
-provider, domain, recipe, and config packages live under `internal/` and cannot
-be imported by another module. Publishing an `infinity-iac` library therefore
-requires a deliberate public package boundary and its compatibility policy.
-The CI workflow for publishing that package is tracked in `TODO.md`; do not
-describe the current CLI release as an SDK release until that work is complete.
+## Go module publication and compatibility
+
+The root `infinityiac` package is importable without exposing raw unchecked OCI
+clients. It aliases selected domain/request/recipe contracts and delegates to
+guarded provider implementations. Offline entry points include `BuiltinCatalog`,
+`RenderCloudInit(Recipe, RenderOptions)`, `RenderLocalScript`, typed input
+resolution, and `NewPlan`. Cloud constructors use real local OCI config; callers
+must enforce confirmation and context deadlines.
+
+The same semver Git tag publishes the Go module; no separate credential-backed
+registry workflow is necessary. External-package tests verify the boundary.
+Older tags do not contain this public surface. Avoid breaking exported contracts
+without a deliberate version change and compatibility tests.
+
+## Known limits
+
+Keep unverified app/platform/backup and live-compute coverage explicit. Current
+first-party networking was exercised live with confirmed cleanup; A1 compute
+allocation was blocked by service limits, not passed. Do not describe every
+experimental catalog definition as runtime certified.

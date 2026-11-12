@@ -1,6 +1,6 @@
 {
   "api_version": "recipe/v1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "kind": "application",
   "supports": {
     "providers": [
@@ -20,17 +20,17 @@
   "inputs": {
     "port": {
       "type": "integer",
-      "description": "Public service port.",
+      "description": "Loopback host port; connect through an SSH tunnel or an authenticated reverse proxy.",
       "default": 11434,
       "min": 1,
       "max": 65535
     }
   },
   "resources": {
-    "specs": "ibase2",
+    "specs": "auto",
     "cpu": 2,
-    "ram_gb": 2,
-    "storage_gb": 30,
+    "ram_gb": 4,
+    "storage_gb": 60,
     "ingress": [
       {
         "port": 11434,
@@ -48,23 +48,27 @@
     {
       "id": "start-ollama",
       "type": "command",
-      "command": "docker rm -f ollama >/dev/null 2>&1 || true; docker run -d --restart unless-stopped --name ollama -p 127.0.0.1:{{port}}:11434 ollama/ollama:latest"
+      "command": "recipe='ollama'\nowned_volume() {\n  if docker volume inspect \"$1\" >/dev/null 2>&1; then\n    owner=$(docker volume inspect -f '{{ index .Labels \"infinity-iac-recipe\" }}' \"$1\")\n    [ \"$owner\" = \"$recipe\" ] || { printf '%s\\n' 'Refusing unowned volume' >&2; exit 1; }\n  else\n    docker volume create --label \"infinity-iac-recipe=$recipe\" \"$1\" >/dev/null\n  fi\n}\nreplace_container() {\n  if docker inspect \"$1\" >/dev/null 2>&1; then\n    owner=$(docker inspect -f '{{ index .Config.Labels \"infinity-iac-recipe\" }}' \"$1\")\n    [ \"$owner\" = \"$recipe\" ] || { printf '%s\\n' 'Refusing unowned container' >&2; exit 1; }\n    docker rm -f \"$1\" >/dev/null\n  fi\n}\nowned_volume 'infinity-ollama-data'\nreplace_container ollama\ndocker run -d --restart unless-stopped --label infinity-iac-recipe=ollama --name ollama -v infinity-ollama-data:/root/.ollama -p 127.0.0.1:{{port}}:11434 ollama/ollama@sha256:0e59999e0e8f9fd4e704bd788a89b7e4cad399367fb1365f8c102ac662288761\n",
+      "timeout_seconds": 1200
     }
   ],
   "health": [
     {
-      "type": "command",
-      "command": "docker inspect -f '{{.State.Running}}' ollama | grep -q true"
+      "type": "http",
+      "port": 11434,
+      "path": "/api/tags",
+      "timeout_seconds": 240
     }
   ],
   "outputs": {
     "url": {
       "type": "string",
-      "value": "http://INSTANCE_PUBLIC_IP:{{port}}"
+      "value": "http://127.0.0.1:{{port}}"
     }
   },
-  "status": "template",
+  "status": "experimental",
   "requirements": [
-    "Complete startup/configuration, required services, credentials, persistence, and protocol readiness before deployment. See docs/builtin-catalog.md."
+    "CPU-only daemon with no downloaded model. Pull an appropriately sized model explicitly; model execution is not a readiness check.",
+    "The unauthenticated API is loopback-only. GPU use requires compatible hardware/runtime not supplied by this recipe."
   ]
 }

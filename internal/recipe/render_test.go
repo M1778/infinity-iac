@@ -19,7 +19,12 @@ func TestEveryRecipeRendersValidShell(t *testing.T) {
 			if len(item.Resources.Ingress) > 0 {
 				port = item.Resources.Ingress[0].Port
 			}
-			data, err := RenderCloudInit(item, port)
+			var data string
+			if item.Execution == "local" {
+				data, err = RenderLocalScript(item, RenderOptions{})
+			} else {
+				data, err = RenderCloudInit(item, port)
+			}
 			if item.Status == "template" {
 				if err == nil {
 					t.Fatal("incomplete templates must not render")
@@ -29,7 +34,7 @@ func TestEveryRecipeRendersValidShell(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !strings.Contains(data, "set -euo pipefail") || !strings.Contains(data, "/var/lib/infinity-iac/ready/") {
+			if !strings.Contains(data, "set -euo pipefail") || item.Execution != "local" && !strings.Contains(data, "/var/lib/infinity-iac/ready/") {
 				t.Fatal("bootstrap must fail on errors and record completed health checks")
 			}
 			if shellErr == nil {

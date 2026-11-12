@@ -1,6 +1,6 @@
 {
   "api_version": "recipe/v1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "kind": "application",
   "supports": {
     "providers": [
@@ -10,17 +10,14 @@
       "ubuntu-24.04",
       "ubuntu-22.04"
     ],
-    "architectures": [
-      "amd64",
-      "arm64"
-    ]
+    "architectures": []
   },
   "name": "penpot",
   "description": "Collaborative design tool.",
   "inputs": {
     "port": {
       "type": "integer",
-      "description": "Public service port.",
+      "description": "Loopback host port reserved for a completed deployment; this integration remains blocked.",
       "default": 9001,
       "min": 1,
       "max": 65535
@@ -41,30 +38,17 @@
   },
   "steps": [
     {
-      "id": "install-docker",
-      "type": "package",
-      "package": "docker.io"
-    },
-    {
-      "id": "start-penpot",
+      "id": "require-supported-deployment",
       "type": "command",
-      "command": "docker rm -f penpot >/dev/null 2>&1 || true; docker run -d --restart unless-stopped --name penpot -p 127.0.0.1:{{port}}:9001 penpotapp/frontend:latest"
+      "command": "printf '%s\\n' 'penpot: deployment prerequisites are not yet implemented; inspect recipe requirements.' >&2; exit 1",
+      "timeout_seconds": 10
     }
   ],
-  "health": [
-    {
-      "type": "command",
-      "command": "docker inspect -f '{{.State.Running}}' penpot | grep -q true"
-    }
-  ],
-  "outputs": {
-    "url": {
-      "type": "string",
-      "value": "http://INSTANCE_PUBLIC_IP:{{port}}"
-    }
-  },
+  "health": [],
+  "outputs": {},
   "status": "template",
   "requirements": [
-    "Complete startup/configuration, required services, credentials, persistence, and protocol readiness before deployment. See docs/builtin-catalog.md."
+    "Deploy matching Penpot frontend/backend/exporter with persistent PostgreSQL and cache plus configured secrets, flags and application URI.",
+    "Map the actual frontend port 8080, configure authentication/TLS/email and verify backend/exporter readiness; a frontend-only container is incomplete."
   ]
 }

@@ -1,6 +1,6 @@
 {
   "api_version": "recipe/v1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "kind": "application",
   "supports": {
     "providers": [
@@ -10,17 +10,14 @@
       "ubuntu-24.04",
       "ubuntu-22.04"
     ],
-    "architectures": [
-      "amd64",
-      "arm64"
-    ]
+    "architectures": []
   },
   "name": "strapi",
   "description": "Headless CMS.",
   "inputs": {
     "port": {
       "type": "integer",
-      "description": "Public service port.",
+      "description": "Loopback host port reserved for a completed deployment; this integration remains blocked.",
       "default": 1337,
       "min": 1,
       "max": 65535
@@ -41,30 +38,17 @@
   },
   "steps": [
     {
-      "id": "install-docker",
-      "type": "package",
-      "package": "docker.io"
-    },
-    {
-      "id": "start-strapi",
+      "id": "require-supported-deployment",
       "type": "command",
-      "command": "docker rm -f strapi >/dev/null 2>&1 || true; docker run -d --restart unless-stopped --name strapi -p 127.0.0.1:{{port}}:1337 strapi/strapi:latest"
+      "command": "printf '%s\\n' 'strapi: deployment prerequisites are not yet implemented; inspect recipe requirements.' >&2; exit 1",
+      "timeout_seconds": 10
     }
   ],
-  "health": [
-    {
-      "type": "command",
-      "command": "docker inspect -f '{{.State.Running}}' strapi | grep -q true"
-    }
-  ],
-  "outputs": {
-    "url": {
-      "type": "string",
-      "value": "http://INSTANCE_PUBLIC_IP:{{port}}"
-    }
-  },
+  "health": [],
+  "outputs": {},
   "status": "template",
   "requirements": [
-    "Complete startup/configuration, required services, credentials, persistence, and protocol readiness before deployment. See docs/builtin-catalog.md."
+    "Build or supply a reviewed supported Strapi application image containing the actual project, dependencies and matching Node version; the old strapi/strapi image is legacy v3.",
+    "Configure persistent database/uploads, application JWT/encryption secrets, administrator bootstrap, migrations and health endpoint for that project."
   ]
 }

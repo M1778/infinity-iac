@@ -1,6 +1,6 @@
 {
   "api_version": "recipe/v1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "kind": "application",
   "supports": {
     "providers": [
@@ -10,17 +10,14 @@
       "ubuntu-24.04",
       "ubuntu-22.04"
     ],
-    "architectures": [
-      "amd64",
-      "arm64"
-    ]
+    "architectures": []
   },
   "name": "gitlab",
   "description": "DevOps lifecycle platform.",
   "inputs": {
     "port": {
       "type": "integer",
-      "description": "Public service port.",
+      "description": "Loopback host port reserved for a completed deployment; this integration remains blocked.",
       "default": 80,
       "min": 1,
       "max": 65535
@@ -41,30 +38,17 @@
   },
   "steps": [
     {
-      "id": "install-docker",
-      "type": "package",
-      "package": "docker.io"
-    },
-    {
-      "id": "start-gitlab",
+      "id": "require-supported-deployment",
       "type": "command",
-      "command": "docker rm -f gitlab >/dev/null 2>&1 || true; docker run -d --restart unless-stopped --name gitlab -p 127.0.0.1:{{port}}:80 gitlab/gitlab-ce:latest"
+      "command": "printf '%s\\n' 'gitlab: deployment prerequisites are not yet implemented; inspect recipe requirements.' >&2; exit 1",
+      "timeout_seconds": 10
     }
   ],
-  "health": [
-    {
-      "type": "command",
-      "command": "docker inspect -f '{{.State.Running}}' gitlab | grep -q true"
-    }
-  ],
-  "outputs": {
-    "url": {
-      "type": "string",
-      "value": "http://INSTANCE_PUBLIC_IP:{{port}}"
-    }
-  },
+  "health": [],
+  "outputs": {},
   "status": "template",
   "requirements": [
-    "Complete startup/configuration, required services, credentials, persistence, and protocol readiness before deployment. See docs/builtin-catalog.md."
+    "Choose a version-pinned supported GitLab Omnibus image and sufficient CPU/RAM/storage; persist /etc/gitlab, /var/log/gitlab and /var/opt/gitlab.",
+    "Set a stable external_url and ports, protect/rotate the initial administrator credential and configure email/TLS; verify all internal services before declaring readiness."
   ]
 }

@@ -1,6 +1,6 @@
 {
   "api_version": "recipe/v1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "kind": "application",
   "supports": {
     "providers": [
@@ -10,17 +10,14 @@
       "ubuntu-24.04",
       "ubuntu-22.04"
     ],
-    "architectures": [
-      "amd64",
-      "arm64"
-    ]
+    "architectures": []
   },
   "name": "restic-rest-server",
   "description": "Restic backup service.",
   "inputs": {
     "port": {
       "type": "integer",
-      "description": "Public service port.",
+      "description": "Loopback host port reserved for a completed deployment; this integration remains blocked.",
       "default": 8000,
       "min": 1,
       "max": 65535
@@ -41,30 +38,17 @@
   },
   "steps": [
     {
-      "id": "install-docker",
-      "type": "package",
-      "package": "docker.io"
-    },
-    {
-      "id": "start-restic-rest-server",
+      "id": "require-supported-deployment",
       "type": "command",
-      "command": "docker rm -f restic_rest_server >/dev/null 2>&1 || true; docker run -d --restart unless-stopped --name restic_rest_server -p 127.0.0.1:{{port}}:8000 restic/rest-server:latest"
+      "command": "printf '%s\\n' 'restic-rest-server: deployment prerequisites are not yet implemented; inspect recipe requirements.' >&2; exit 1",
+      "timeout_seconds": 10
     }
   ],
-  "health": [
-    {
-      "type": "command",
-      "command": "docker inspect -f '{{.State.Running}}' restic_rest_server | grep -q true"
-    }
-  ],
-  "outputs": {
-    "url": {
-      "type": "string",
-      "value": "http://INSTANCE_PUBLIC_IP:{{port}}"
-    }
-  },
+  "health": [],
+  "outputs": {},
   "status": "template",
   "requirements": [
-    "Complete startup/configuration, required services, credentials, persistence, and protocol readiness before deployment. See docs/builtin-catalog.md."
+    "Provide a maintained rest-server version with durable repository storage, explicit htpasswd users and append-only policy where appropriate.",
+    "Configure authenticated TLS or loopback proxy, authorized clients and independent restore tests; a process-running check does not prove a backup."
   ]
 }

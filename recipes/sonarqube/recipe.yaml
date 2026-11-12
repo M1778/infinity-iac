@@ -1,6 +1,6 @@
 {
   "api_version": "recipe/v1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "kind": "application",
   "supports": {
     "providers": [
@@ -10,17 +10,14 @@
       "ubuntu-24.04",
       "ubuntu-22.04"
     ],
-    "architectures": [
-      "amd64",
-      "arm64"
-    ]
+    "architectures": []
   },
   "name": "sonarqube",
   "description": "Code quality platform.",
   "inputs": {
     "port": {
       "type": "integer",
-      "description": "Public service port.",
+      "description": "Loopback host port reserved for a completed deployment; this integration remains blocked.",
       "default": 9000,
       "min": 1,
       "max": 65535
@@ -41,30 +38,17 @@
   },
   "steps": [
     {
-      "id": "install-docker",
-      "type": "package",
-      "package": "docker.io"
-    },
-    {
-      "id": "start-sonarqube",
+      "id": "require-supported-deployment",
       "type": "command",
-      "command": "docker rm -f sonarqube >/dev/null 2>&1 || true; docker run -d --restart unless-stopped --name sonarqube -p 127.0.0.1:{{port}}:9000 sonarqube:community"
+      "command": "printf '%s\\n' 'sonarqube: deployment prerequisites are not yet implemented; inspect recipe requirements.' >&2; exit 1",
+      "timeout_seconds": 10
     }
   ],
-  "health": [
-    {
-      "type": "command",
-      "command": "docker inspect -f '{{.State.Running}}' sonarqube | grep -q true"
-    }
-  ],
-  "outputs": {
-    "url": {
-      "type": "string",
-      "value": "http://INSTANCE_PUBLIC_IP:{{port}}"
-    }
-  },
+  "health": [],
+  "outputs": {},
   "status": "template",
   "requirements": [
-    "Complete startup/configuration, required services, credentials, persistence, and protocol readiness before deployment. See docs/builtin-catalog.md."
+    "Complete matching SonarQube plus persistent PostgreSQL with data/extensions/logs and verified vm.max_map_count, open-file/process limits and adequate memory.",
+    "Change the bootstrap administrator, verify search engine and application status, and configure TLS before accepting source code."
   ]
 }

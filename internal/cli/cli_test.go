@@ -117,7 +117,12 @@ func TestEveryBuiltInRecipeRendersCloudInit(t *testing.T) {
 	}
 	for _, item := range items {
 		port := recipePort(item)
-		_, err := recipeCloudInit(item, port)
+		var err error
+		if item.Execution == "local" {
+			_, err = recipe.RenderLocalScript(item, recipe.RenderOptions{})
+		} else {
+			_, err = recipeCloudInit(item, port)
+		}
 		if item.Status == "template" {
 			if err == nil {
 				t.Errorf("template %s must fail before deployment", item.Name)
@@ -258,7 +263,7 @@ func TestRunRejectsConflictingSelectorsAndTemplates(t *testing.T) {
 			t.Fatalf("ambiguous run accepted: %v: %d %s", args, code, stderr)
 		}
 	}
-	_, stderr, code := call(t, "run", "--recipe", "wordpress", "--yes")
+	_, stderr, code := call(t, "run", "--recipe", "argocd", "--yes")
 	if code == 0 || !strings.Contains(stderr, "incomplete template") {
 		t.Fatalf("template must fail before provider access: %d %s", code, stderr)
 	}

@@ -1,6 +1,6 @@
 {
   "api_version": "recipe/v1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "kind": "application",
   "supports": {
     "providers": [
@@ -20,16 +20,16 @@
   "inputs": {
     "port": {
       "type": "integer",
-      "description": "Public service port.",
+      "description": "Loopback host port; connect through an SSH tunnel or an authenticated reverse proxy.",
       "default": 3000,
       "min": 1,
       "max": 65535
     }
   },
   "resources": {
-    "specs": "ibase2",
+    "specs": "auto",
     "cpu": 2,
-    "ram_gb": 2,
+    "ram_gb": 3,
     "storage_gb": 30,
     "ingress": [
       {
@@ -48,23 +48,27 @@
     {
       "id": "start-metabase",
       "type": "command",
-      "command": "docker rm -f metabase >/dev/null 2>&1 || true; docker run -d --restart unless-stopped --name metabase -p 127.0.0.1:{{port}}:3000 metabase/metabase:latest"
+      "command": "recipe='metabase'\nowned_volume() {\n  if docker volume inspect \"$1\" >/dev/null 2>&1; then\n    owner=$(docker volume inspect -f '{{ index .Labels \"infinity-iac-recipe\" }}' \"$1\")\n    [ \"$owner\" = \"$recipe\" ] || { printf '%s\\n' 'Refusing unowned volume' >&2; exit 1; }\n  else\n    docker volume create --label \"infinity-iac-recipe=$recipe\" \"$1\" >/dev/null\n  fi\n}\nreplace_container() {\n  if docker inspect \"$1\" >/dev/null 2>&1; then\n    owner=$(docker inspect -f '{{ index .Config.Labels \"infinity-iac-recipe\" }}' \"$1\")\n    [ \"$owner\" = \"$recipe\" ] || { printf '%s\\n' 'Refusing unowned container' >&2; exit 1; }\n    docker rm -f \"$1\" >/dev/null\n  fi\n}\nowned_volume 'infinity-metabase-data'\nreplace_container metabase\ndocker run -d --restart unless-stopped --label infinity-iac-recipe=metabase --name metabase -v infinity-metabase-data:/metabase-data -e MB_DB_FILE=\"/metabase-data/metabase.db\" -p 127.0.0.1:{{port}}:3000 metabase/metabase@sha256:88541aec40e299b37fc34a0df9467283d47b7534e0226983fea141e36f28fc72\n",
+      "timeout_seconds": 1200
     }
   ],
   "health": [
     {
-      "type": "command",
-      "command": "docker inspect -f '{{.State.Running}}' metabase | grep -q true"
+      "type": "http",
+      "port": 3000,
+      "path": "/api/health",
+      "timeout_seconds": 240
     }
   ],
   "outputs": {
     "url": {
       "type": "string",
-      "value": "http://INSTANCE_PUBLIC_IP:{{port}}"
+      "value": "http://127.0.0.1:{{port}}"
     }
   },
-  "status": "template",
+  "status": "experimental",
   "requirements": [
-    "Complete startup/configuration, required services, credentials, persistence, and protocol readiness before deployment. See docs/builtin-catalog.md."
+    "Embedded H2 storage is for evaluation; migrate to a backed-up production application database before serious use.",
+    "Complete initial administrator onboarding through the SSH tunnel."
   ]
 }

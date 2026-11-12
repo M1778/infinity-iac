@@ -18,13 +18,19 @@ import (
 
 const APIVersion = "recipe/v1"
 
-var validRecipeName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
+var (
+	validRecipeName       = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*$`)
+	validInputName        = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
+	validInputEnvironment = regexp.MustCompile(`^INFINITY_INPUT_[A-Z][A-Z0-9_]*$`)
+	validPackageName      = regexp.MustCompile(`^[a-z0-9][a-z0-9+.-]*(:[a-z0-9]+)?$`)
+)
 
 type Recipe struct {
 	APIVersion   string            `json:"api_version" yaml:"api_version"`
 	Name         string            `json:"name" yaml:"name"`
 	Version      string            `json:"version" yaml:"version"`
 	Kind         string            `json:"kind" yaml:"kind"`
+	Execution    string            `json:"execution,omitempty" yaml:"execution,omitempty"`
 	Description  string            `json:"description,omitempty" yaml:"description,omitempty"`
 	Status       string            `json:"status,omitempty" yaml:"status,omitempty"`
 	Requirements []string          `json:"requirements,omitempty" yaml:"requirements,omitempty"`
@@ -46,6 +52,8 @@ type Input struct {
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
 	Default     any    `json:"default,omitempty" yaml:"default,omitempty"`
 	Required    bool   `json:"required,omitempty" yaml:"required,omitempty"`
+	Sensitive   bool   `json:"sensitive,omitempty" yaml:"sensitive,omitempty"`
+	Environment string `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Min         int    `json:"min,omitempty" yaml:"min,omitempty"`
 	Max         int    `json:"max,omitempty" yaml:"max,omitempty"`
 }
@@ -66,7 +74,9 @@ type Step struct {
 	Type           string `json:"type" yaml:"type"`
 	Command        string `json:"command,omitempty" yaml:"command,omitempty"`
 	Source         string `json:"source,omitempty" yaml:"source,omitempty"`
+	Content        string `json:"content,omitempty" yaml:"content,omitempty"`
 	Destination    string `json:"destination,omitempty" yaml:"destination,omitempty"`
+	Mode           string `json:"mode,omitempty" yaml:"mode,omitempty"`
 	Package        string `json:"package,omitempty" yaml:"package,omitempty"`
 	TimeoutSeconds int    `json:"timeout_seconds,omitempty" yaml:"timeout_seconds,omitempty"`
 }
@@ -127,6 +137,17 @@ func (r Recipe) Validate() error {
 	if r.Kind != "application" && r.Kind != "script" {
 		return errors.New("kind must be application or script")
 	}
+	if r.Execution != "" && r.Execution != "instance" && r.Execution != "local" {
+		return errors.New("execution must be instance or local")
+	}
+	if r.Execution == "local" && r.Kind != "script" {
+		return errors.New("local execution requires kind script")
+	}
+	for _, requirement := range r.Requirements {
+		if strings.TrimSpace(requirement) == "" {
+			return errors.New("requirements cannot contain empty values")
+		}
+	}
 	for field, values := range map[string][]string{"supports.providers": r.Supports.Providers, "supports.os": r.Supports.OS, "supports.architectures": r.Supports.Architectures} {
 		seen := make(map[string]struct{}, len(values))
 		for _, value := range values {
@@ -140,9 +161,21 @@ func (r Recipe) Validate() error {
 			seen[value] = struct{}{}
 		}
 	}
+	environments := make(map[string]string, len(r.Inputs))
 	for key, in := range r.Inputs {
-		if strings.TrimSpace(key) == "" {
-			return errors.New("input name cannot be empty")
+		if !validInputName.MatchString(key) {
+			return fmt.Errorf("input %q must contain lowercase letters, digits, and underscores", key)
+		}
+		environment := inputEnvironment(key, in)
+		if !validInputEnvironment.MatchString(environment) {
+			return fmt.Errorf("input %q environment must start with INFINITY_INPUT_ and contain uppercase letters, digits, and underscores", key)
+		}
+		if previous, exists := environments[environment]; exists {
+			return fmt.Errorf("inputs %q and %q use the same environment", previous, key)
+		}
+		environments[environment] = key
+		if in.Sensitive && in.Default != nil {
+			return fmt.Errorf("sensitive input %q cannot declare a default", key)
 		}
 		if in.Type != "string" && in.Type != "integer" && in.Type != "boolean" {
 			return fmt.Errorf("input %q has unsupported type %q", key, in.Type)
@@ -156,8 +189,10 @@ func (r Recipe) Validate() error {
 		if (in.Min != 0 || in.Max != 0) && in.Type != "integer" {
 			return fmt.Errorf("input %q bounds require integer type", key)
 		}
-		if in.Default != nil && !validInputDefault(in.Type, in.Default) {
-			return fmt.Errorf("input %q default does not match type %q", key, in.Type)
+		if in.Default != nil {
+			if _, err := normalizeInput(key, in, in.Default); err != nil {
+				return fmt.Errorf("input %q default: %w", key, err)
+			}
 		}
 	}
 	for i, rule := range r.Resources.Ingress {
@@ -192,15 +227,25 @@ func (r Recipe) Validate() error {
 				return fmt.Errorf("step %q command is required", step.ID)
 			}
 		case "upload":
-			if step.Source == "" || step.Destination == "" {
-				return fmt.Errorf("step %q upload requires source and destination", step.ID)
+			if step.Source == "" || !pathpkg.IsAbs(step.Destination) {
+				return fmt.Errorf("step %q upload requires a source and absolute destination", step.ID)
+			}
+		case "file":
+			if !pathpkg.IsAbs(step.Destination) {
+				return fmt.Errorf("step %q file requires an absolute destination", step.ID)
 			}
 		case "package":
-			if step.Package == "" {
-				return fmt.Errorf("step %q package is required", step.ID)
+			if !validPackageName.MatchString(step.Package) {
+				return fmt.Errorf("step %q package name is invalid", step.ID)
 			}
 		default:
 			return fmt.Errorf("step %q has unsupported type %q", step.ID, step.Type)
+		}
+		if r.Execution == "local" && step.Type != "command" {
+			return fmt.Errorf("local step %q must be a command; package installation and file writes require explicit external setup", step.ID)
+		}
+		if step.Mode != "" && step.Mode != "0600" && step.Mode != "0640" && step.Mode != "0644" && step.Mode != "0700" && step.Mode != "0755" {
+			return fmt.Errorf("step %q mode is unsupported", step.ID)
 		}
 		if step.TimeoutSeconds < 0 {
 			return fmt.Errorf("step %q timeout cannot be negative", step.ID)

@@ -3,6 +3,8 @@ package cli
 import (
 	"bufio"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -10,7 +12,10 @@ import (
 	"gopkg.in/yaml.v3"
 	"io"
 	"os"
+	"os/exec"
+	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -28,9 +33,10 @@ type App struct {
 	cfg        config.File
 	configPath string
 	p          provider.Provider
+	n          provider.NetworkProvider
 }
 
-const Version = "1.0.1"
+var Version = "1.1.0"
 
 func Run(args []string) int { return RunWithIO(args, os.Stdin, os.Stdout, os.Stderr) }
 func RunWithIO(args []string, in io.Reader, out, errOut io.Writer) int {
@@ -66,6 +72,10 @@ func RunWithIO(args []string, in io.Reader, out, errOut io.Writer) int {
 		return a.create(args[1:])
 	case "run":
 		return a.run(args[1:])
+	case "network":
+		return a.network(args[1:])
+	case "oc-hunter":
+		return a.ocHunter(args[1:])
 	case "instance":
 		return a.instance(args[1:])
 	case "doctor":
@@ -89,7 +99,7 @@ func RunWithIO(args []string, in io.Reader, out, errOut io.Writer) int {
 }
 func (a *App) help() {
 	fmt.Fprintln(a.out, "Infinity-IaC: infrastructure lifecycle CLI")
-	fmt.Fprintln(a.out, "commands: setup, unlink, list, create, run, instance, plan, apply, install, app, update, recipe, validate, completion, doctor")
+	fmt.Fprintln(a.out, "commands: setup, unlink, list, create, run, network, instance, oc-hunter, plan, apply, install, app, update, recipe, validate, completion, doctor")
 	fmt.Fprintln(a.out, "examples:")
 	fmt.Fprintln(a.out, "  infinity-iac setup oracle --name default --profile DEFAULT --region us-phoenix-1 --compartment OCID --subnet OCID --availability-domain AD --image OCID --shape SHAPE")
 	fmt.Fprintln(a.out, "  infinity-iac create server --name demo --provider oracle --yes")
@@ -130,9 +140,13 @@ func (a *App) setup(args []string) int {
 	image := fs.String("image", "", "OCI image OCID")
 	shape := fs.String("shape", "", "OCI compute shape")
 	sshKey := fs.String("ssh-public-key", "", "SSH public key")
+	networkOnly := fs.Bool("network-only", false, "validate credentials and compartment for network management without a compute profile")
 	autodetect := fs.Bool("autodetect", false, "automatically detect OCI configuration")
 	if err := fs.Parse(args[1:]); err != nil {
 		return 2
+	}
+	if fs.NArg() != 0 {
+		return a.fail("setup oracle accepts flags only")
 	}
 	if *autodetect {
 		metadata, err := provider.DetectOCIConfiguration(*configFile, *profile)
@@ -167,17 +181,29 @@ func (a *App) setup(args []string) int {
 	p.ImageID = *image
 	p.Shape = *shape
 	p.SSHPublicKey = *sshKey
-	if err := validateAccessProfile(p); err != nil {
-		return a.fail(err.Error())
-	}
-	backend, err := provider.NewOCIProvider(p)
-	if err != nil {
-		return a.fail("validate OCI credentials: " + err.Error())
+	if !*networkOnly {
+		if err := validateAccessProfile(p); err != nil {
+			return a.fail(err.Error())
+		}
 	}
 	checkCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	if err := backend.ValidateAccess(checkCtx); err != nil {
-		return a.fail("validate OCI access: " + err.Error())
+	if *networkOnly {
+		backend, err := provider.NewOCINetworkProvider(p)
+		if err != nil {
+			return a.fail("validate OCI credentials: " + err.Error())
+		}
+		if err := backend.ValidateAccess(checkCtx); err != nil {
+			return a.fail("validate OCI network access: " + err.Error())
+		}
+	} else {
+		backend, err := provider.NewOCIProvider(p)
+		if err != nil {
+			return a.fail("validate OCI credentials: " + err.Error())
+		}
+		if err := backend.ValidateAccess(checkCtx); err != nil {
+			return a.fail("validate OCI access: " + err.Error())
+		}
 	}
 	p.ValidatedAt = time.Now().UTC()
 	a.cfg.UpsertProfile(p)
@@ -269,6 +295,11 @@ func (a *App) provider() (provider.Provider, error) {
 }
 
 func (a *App) providerForProfile(profile domain.AccessProfile) (provider.Provider, error) {
+	if a.p != nil {
+		if configured, ok := a.p.(interface{ Profile() domain.AccessProfile }); !ok || configured.Profile() == profile {
+			return a.p, nil
+		}
+	}
 	switch profile.Provider {
 	case "oracle", "oci":
 		p, err := provider.NewOCIProvider(profile)
@@ -291,6 +322,8 @@ func (a *App) list(args []string) int {
 		return a.listAccess(args[1:])
 	case "instances":
 		return a.listInstances(args[1:])
+	case "networks":
+		return a.network(append([]string{"list"}, args[1:]...))
 	case "recipes":
 		return a.listRecipes(args[1:])
 	case "capabilities":
@@ -304,6 +337,7 @@ type recipeSummary struct {
 	Name         string   `json:"name"`
 	Version      string   `json:"version"`
 	Kind         string   `json:"kind"`
+	Execution    string   `json:"execution"`
 	Description  string   `json:"description,omitempty"`
 	Status       string   `json:"status,omitempty"`
 	Requirements []string `json:"requirements,omitempty"`
@@ -321,7 +355,11 @@ func (a *App) listRecipes(args []string) int {
 	}
 	summaries := make([]recipeSummary, 0, len(items))
 	for _, item := range items {
-		summaries = append(summaries, recipeSummary{Name: item.Name, Version: item.Version, Kind: item.Kind, Description: item.Description, Status: item.Status, Requirements: item.Requirements})
+		execution := item.Execution
+		if execution == "" {
+			execution = "instance"
+		}
+		summaries = append(summaries, recipeSummary{Name: item.Name, Version: item.Version, Kind: item.Kind, Execution: execution, Description: item.Description, Status: item.Status, Requirements: item.Requirements})
 	}
 	if mode == "json" {
 		return a.emit(map[string]any{"source": source, "recipes": summaries}, nil)
@@ -345,7 +383,7 @@ func (a *App) listCapabilities(args []string) int {
 	}
 	capabilities := make([]map[string]any, 0, len(items))
 	for _, item := range items {
-		capabilities = append(capabilities, map[string]any{"name": item.Name, "kind": item.Kind, "providers": item.Supports.Providers, "os": item.Supports.OS, "architectures": item.Supports.Architectures, "status": item.Status, "requirements": item.Requirements})
+		capabilities = append(capabilities, map[string]any{"name": item.Name, "kind": item.Kind, "execution": item.Execution, "providers": item.Supports.Providers, "os": item.Supports.OS, "architectures": item.Supports.Architectures, "status": item.Status, "requirements": item.Requirements})
 	}
 	mode, err := outputMode(args)
 	if err != nil {
@@ -487,19 +525,35 @@ func (a *App) listAccess(args []string) int {
 	return 0
 }
 func (a *App) listInstances(args []string) int {
-	mode, err := outputMode(args)
+	fs := flag.NewFlagSet("list instances", flag.ContinueOnError)
+	fs.SetOutput(a.err)
+	access := fs.String("access", "", "access profile")
+	mode := fs.String("output", "table", "table or json")
+	if err := fs.Parse(args); err != nil {
+		return 2
+	}
+	if fs.NArg() != 0 || *mode != "table" && *mode != "json" {
+		return a.fail("list instances accepts --access and --output table|json")
+	}
+	profile, ok := a.cfg.DefaultProfile()
+	if *access != "" {
+		profile, ok = a.cfg.Profile(*access)
+	}
+	if !ok {
+		return a.fail("no access profile configured; run setup oracle")
+	}
+	p, err := a.providerForProfile(profile)
 	if err != nil {
 		return a.fail(err.Error())
 	}
-	p, err := a.provider()
+	a.p = p
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	items, err := p.ListInstances(ctx, provider.Filter{Access: profile.Name})
 	if err != nil {
 		return a.fail(err.Error())
 	}
-	items, err := p.ListInstances(context.Background(), provider.Filter{})
-	if err != nil {
-		return a.fail(err.Error())
-	}
-	if mode == "json" {
+	if *mode == "json" {
 		return a.emit(items, nil)
 	}
 	if len(items) == 0 {
@@ -517,6 +571,9 @@ func (a *App) create(args []string) int {
 	if len(args) == 0 || args[0] == "help" {
 		fmt.Fprintln(a.out, "usage: create server [--name NAME] [--provider PROVIDER] [--cpu N] [--ram NGB] [--storage-size NGB] [--amount N] [--yes]")
 		return 0
+	}
+	if args[0] == "network" {
+		return a.network(append([]string{"create"}, args[1:]...))
 	}
 	if args[0] != "server" {
 		return a.fail("unknown create target " + args[0])
@@ -547,8 +604,17 @@ func (a *App) createServer(args []string, kind string, userData ...string) int {
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
-	if *amount < 1 {
-		return a.fail("amount must be at least 1")
+	if *amount < 1 || *amount > 100 {
+		return a.fail("amount must be between 1 and 100")
+	}
+	if fs.NArg() != 0 {
+		return a.fail("create server accepts flags only")
+	}
+	if *mode != "table" && *mode != "json" {
+		return a.fail("output must be table or json")
+	}
+	if *port < 0 || *port > 65535 {
+		return a.fail("port must be between 0 and 65535")
 	}
 	if strings.TrimSpace(*networking) != "" {
 		return a.fail("--networking-script is not supported by the OCI provider in this release")
@@ -595,6 +661,14 @@ func (a *App) createServer(args []string, kind string, userData ...string) int {
 		base = kind
 	}
 	created := make([]domain.Instance, 0, *amount)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
+	defer cancel()
+	operation := make([]byte, 16)
+	if _, err := rand.Read(operation); err != nil {
+		return a.fail("create operation identity: " + err.Error())
+	}
 	for n := 0; n < *amount; n++ {
 		nme := base
 		if *amount > 1 {
@@ -618,7 +692,7 @@ func (a *App) createServer(args []string, kind string, userData ...string) int {
 			}
 			bootstrap += string(script)
 		}
-		i, err := p.CreateInstance(context.Background(), provider.CreateRequest{Spec: spec, IdempotencyKey: "create-" + nme, UserData: bootstrap})
+		i, err := p.CreateInstance(ctx, provider.CreateRequest{Spec: spec, IdempotencyKey: "create-" + hex.EncodeToString(operation) + "-" + strconv.Itoa(n), UserData: bootstrap})
 		if err != nil {
 			return a.fail(err.Error())
 		}
@@ -635,25 +709,29 @@ func (a *App) createServer(args []string, kind string, userData ...string) int {
 
 func (a *App) run(args []string) int {
 	if len(args) == 0 || args[0] == "help" {
-		fmt.Fprintln(a.out, "usage: run --app NAME|--script NAME|--recipe NAME [--specs auto] [--port N] [--startup-script PATH] [--yes]")
+		fmt.Fprintln(a.out, "usage: run --app NAME|--script NAME|--recipe NAME [--access NAME] [--inputs FILE] [--port N] [--local] [--dry-run] [--yes]")
 		return 0
 	}
 	fs := flag.NewFlagSet("run", flag.ContinueOnError)
 	fs.SetOutput(a.err)
 	app := fs.String("app", "", "application name")
-	script := fs.String("script", "", "recipe name")
-	recipe := fs.String("recipe", "", "recipe name (alias)")
+	scriptName := fs.String("script", "", "script name")
+	recipeName := fs.String("recipe", "", "recipe name")
 	specs := fs.String("specs", "auto", "specification preset")
 	port := fs.Int("port", 0, "application port")
 	name := fs.String("name", "", "instance name")
+	access := fs.String("access", "", "access profile")
+	inputsFile := fs.String("inputs", "", "JSON or YAML file containing typed input values")
 	startup := fs.String("startup-script", "", "additional startup script path")
-	yes := fs.Bool("yes", false, "confirm")
+	local := fs.Bool("local", false, "confirm execution on this machine for a local script")
+	dryRun := fs.Bool("dry-run", false, "validate and describe execution without launching or running commands")
+	yes := fs.Bool("yes", false, "confirm execution")
 	mode := fs.String("output", "table", "table or json")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
 	selectors := 0
-	for _, value := range []string{*app, *script, *recipe} {
+	for _, value := range []string{*app, *scriptName, *recipeName} {
 		if value != "" {
 			selectors++
 		}
@@ -661,33 +739,164 @@ func (a *App) run(args []string) int {
 	if selectors != 1 || fs.NArg() != 0 {
 		return a.fail("run requires exactly one of --app, --script, or --recipe")
 	}
+	if *mode != "table" && *mode != "json" {
+		return a.fail("output must be table or json")
+	}
 	target := *app
 	if target == "" {
-		target = *script
+		target = *scriptName
 	}
 	if target == "" {
-		target = *recipe
-	}
-	if *name == "" {
-		*name = target
+		target = *recipeName
 	}
 	if *specs != "" && *specs != "auto" {
 		return a.fail("only specs=auto is supported in this release")
 	}
 	item, ok := findRecipe(target)
-	if ok {
-		if *port == 0 {
-			*port = recipePort(item)
-		}
-	} else {
+	if !ok {
 		return a.fail(fmt.Sprintf("recipe %q was not found; use list recipes", target))
 	}
-	cpu, ram, storage := recipeResources(item)
-	bootstrap, err := recipeCloudInit(item, *port)
+	if *app != "" && item.Kind != "application" || *scriptName != "" && item.Kind != "script" {
+		return a.fail("recipe kind does not match the selected --app or --script selector")
+	}
+	values, err := loadRecipeInputs(*inputsFile)
+	if err != nil {
+		return a.fail(err.Error())
+	}
+	if values == nil {
+		values = make(map[string]any)
+	}
+	if item.Execution == "local" && *access != "" {
+		if _, exists := item.Inputs["access"]; exists {
+			values["access"] = *access
+		}
+	}
+	if item.Execution == "local" && *name != "" {
+		if _, exists := item.Inputs["name"]; exists {
+			values["name"] = *name
+		}
+	}
+	if *port == 0 && values["port"] == nil {
+		*port = recipePort(item)
+	}
+	options := recipe.RenderOptions{Port: *port, Inputs: values}
+	if item.Execution == "local" {
+		if *startup != "" {
+			return a.fail("local scripts do not accept a guest startup script")
+		}
+		if !*local && !*dryRun {
+			return a.fail("this script runs on your machine; pass --local explicitly or use --dry-run")
+		}
+		if err := item.CheckSupport("oracle", runtime.GOOS, runtime.GOARCH); err != nil {
+			return a.fail(err.Error())
+		}
+		if _, exists := item.Inputs["yes"]; exists {
+			values["yes"] = *yes
+		}
+		data, err := recipe.RenderLocalScript(item, options)
+		if err != nil {
+			return a.fail("prepare local script: " + err.Error())
+		}
+		if *dryRun {
+			return a.emit(map[string]any{"recipe": item.Name, "execution": "local", "dry_run": true}, nil)
+		}
+		if !*yes && !isTerminal(a.in) {
+			return a.fail("local script execution requires --yes in noninteractive mode")
+		}
+		if !*yes && !a.confirm("execute local script "+item.Name) {
+			return 1
+		}
+		if _, exists := item.Inputs["yes"]; exists {
+			values["yes"] = true
+			data, err = recipe.RenderLocalScript(item, options)
+			if err != nil {
+				return a.fail(err.Error())
+			}
+		}
+		binary, err := os.Executable()
+		if err != nil {
+			return a.fail(err.Error())
+		}
+		ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, "bash", "-s")
+		cmd.Stdin = strings.NewReader(data)
+		cmd.Stdout, cmd.Stderr = a.out, a.err
+		cmd.Env = append(os.Environ(), "INFINITY_IAC_BINARY="+binary)
+		if err := cmd.Run(); err != nil {
+			return a.fail("local script execution failed: " + err.Error())
+		}
+		return 0
+	}
+	if *local {
+		return a.fail("this recipe requires an instance; --local cannot run guest bootstrap on your machine")
+	}
+	bootstrap, err := recipe.RenderCloudInitWithInputs(item, options)
 	if err != nil {
 		return a.fail("prepare recipe: " + err.Error())
 	}
-	createArgs := []string{"--name", *name, "--cpu", strconv.Itoa(cpu), "--ram", strconv.Itoa(ram) + "GB", "--storage-size", strconv.Itoa(storage) + "GB", "--port", strconv.Itoa(*port), "--yes=" + strconv.FormatBool(*yes), "--output", *mode}
+	if *dryRun {
+		return a.emit(map[string]any{"recipe": item.Name, "execution": "instance", "dry_run": true, "cpu": item.Resources.CPU, "ram_gb": item.Resources.RAMGB, "storage_gb": item.Resources.StorageGB}, nil)
+	}
+	profile, ok := a.cfg.DefaultProfile()
+	if *access != "" {
+		profile, ok = a.cfg.Profile(*access)
+	}
+	if !ok {
+		return a.fail("no access profile configured; run setup oracle")
+	}
+	architecture := "amd64"
+	if strings.HasPrefix(profile.Shape, "VM.Standard.A1.") || strings.HasPrefix(profile.Shape, "VM.Standard.A2.") {
+		architecture = "arm64"
+	}
+	if len(item.Supports.Architectures) > 0 {
+		supported := false
+		for _, allowed := range item.Supports.Architectures {
+			if allowed == architecture {
+				supported = true
+			}
+		}
+		if !supported {
+			return a.fail(fmt.Sprintf("recipe %q does not support architecture %q", item.Name, architecture))
+		}
+	}
+	if len(item.Supports.Providers) > 0 {
+		supported := false
+		for _, allowed := range item.Supports.Providers {
+			if allowed == profile.Provider || (allowed == "oracle" || allowed == "oci") && (profile.Provider == "oracle" || profile.Provider == "oci") {
+				supported = true
+			}
+		}
+		if !supported {
+			return a.fail("recipe does not support the selected provider")
+		}
+	}
+	if len(item.Supports.OS) > 0 {
+		backend, err := a.providerForProfile(profile)
+		if err != nil {
+			return a.fail(err.Error())
+		}
+		reader, ok := backend.(interface {
+			OperatingSystem(context.Context) (string, error)
+		})
+		if !ok {
+			return a.fail("provider cannot verify the recipe operating system")
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		osName, err := reader.OperatingSystem(ctx)
+		cancel()
+		if err != nil {
+			return a.fail("inspect configured image: " + err.Error())
+		}
+		if err := item.CheckSupport(profile.Provider, osName, architecture); err != nil {
+			return a.fail(err.Error())
+		}
+	}
+	if *name == "" {
+		*name = target
+	}
+	cpu, ram, storage := recipeResources(item)
+	createArgs := []string{"--name", *name, "--access", profile.Name, "--cpu", strconv.Itoa(cpu), "--ram", strconv.Itoa(ram) + "GB", "--storage-size", strconv.Itoa(storage) + "GB", "--port", strconv.Itoa(*port), "--yes=" + strconv.FormatBool(*yes), "--output", *mode}
 	if *startup != "" {
 		createArgs = append(createArgs, "--startup-script", *startup)
 	}
@@ -745,72 +954,141 @@ func recipeCloudInit(item recipe.Recipe, port int) (string, error) {
 
 func (a *App) instance(args []string) int {
 	if len(args) == 0 || args[0] == "help" {
-		fmt.Fprintln(a.out, "usage: instance stop|restart|delete ID [--yes] [--output json]")
+		fmt.Fprintln(a.out, "usage: instance get|start|stop|restart|delete ID [--access NAME] [--wait] [--timeout 10m] [--yes] [--output json]")
 		return 0
 	}
 	action := args[0]
-	if action != "stop" && action != "restart" && action != "delete" {
+	if action != "get" && action != "start" && action != "stop" && action != "restart" && action != "delete" {
 		return a.fail("unknown instance action " + action)
-	}
-	// Normalize positional instance ID and flags before parsing because Go's
-	// flag package stops parsing flags after the first positional argument.
-	var positional string
-	parseArgs := make([]string, 0, len(args[1:]))
-	for _, arg := range args[1:] {
-		if strings.HasPrefix(arg, "-") {
-			parseArgs = append(parseArgs, arg)
-		} else if positional == "" {
-			positional = arg
-		} else {
-			parseArgs = append(parseArgs, arg)
-		}
-	}
-	if positional != "" {
-		parseArgs = append(parseArgs, positional)
 	}
 	fs := flag.NewFlagSet("instance "+action, flag.ContinueOnError)
 	fs.SetOutput(a.err)
-	yes := fs.Bool("yes", false, "confirm deletion")
+	yes := fs.Bool("yes", false, "confirm mutation")
+	access := fs.String("access", "", "access profile")
+	wait := fs.Bool("wait", false, "wait for the operation to finish")
+	timeout := fs.Duration("timeout", 10*time.Minute, "operation deadline")
 	mode := fs.String("output", "table", "table or json")
+	parseArgs, err := flagsBeforePositionals(fs, args[1:])
+	if err != nil {
+		return a.fail(err.Error())
+	}
 	if err := fs.Parse(parseArgs); err != nil {
 		return 2
 	}
 	if fs.NArg() != 1 {
 		return a.fail("instance ID or name is required")
 	}
-	p, err := a.provider()
+	if *mode != "table" && *mode != "json" {
+		return a.fail("output must be table or json")
+	}
+	if *timeout <= 0 || *timeout > time.Hour {
+		return a.fail("timeout must be greater than zero and at most one hour")
+	}
+	profile, ok := a.cfg.DefaultProfile()
+	if *access != "" {
+		profile, ok = a.cfg.Profile(*access)
+	}
+	if !ok {
+		return a.fail("no access profile configured; run setup oracle")
+	}
+	p, err := a.providerForProfile(profile)
 	if err != nil {
 		return a.fail(err.Error())
 	}
-	id, err := a.resolveInstance(p, fs.Arg(0))
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+	ctx, cancel := context.WithTimeout(ctx, *timeout)
+	defer cancel()
+	items, err := p.ListInstances(ctx, provider.Filter{Access: profile.Name})
 	if err != nil {
 		return a.fail(err.Error())
 	}
-	if action == "delete" {
-		if !*yes && !isTerminal(a.in) {
-			return a.fail("deletion requires --yes in noninteractive mode")
+	id := ""
+	for _, item := range items {
+		if item.ID == fs.Arg(0) || item.Name == fs.Arg(0) {
+			if id != "" && id != item.ID {
+				return a.fail("instance name is ambiguous; use an exact ID")
+			}
+			id = item.ID
 		}
-		if !*yes && !a.confirm("delete instance "+id) {
+	}
+	if id == "" {
+		return a.fail(fmt.Sprintf("managed instance %q not found", fs.Arg(0)))
+	}
+	if action != "get" {
+		if !*yes && !isTerminal(a.in) {
+			return a.fail("instance mutation requires --yes in noninteractive mode")
+		}
+		if !*yes && !a.confirm(action+" instance "+id) {
 			return 1
 		}
-		err = p.DeleteInstance(context.Background(), id)
+	}
+	if action == "delete" {
+		if *wait {
+			if waiter, ok := p.(interface {
+				DeleteInstanceAndWait(context.Context, string) error
+			}); ok {
+				err = waiter.DeleteInstanceAndWait(ctx, id)
+			} else {
+				return a.fail("provider does not support confirmed deletion")
+			}
+		} else {
+			err = p.DeleteInstance(ctx, id)
+		}
 		if err != nil {
 			return a.fail(err.Error())
 		}
-		if *mode == "json" {
-			return a.emit(map[string]any{"id": id, "status": domain.StatusDeleted}, nil)
+		status := "terminating"
+		if *wait {
+			status = domain.StatusDeleted
 		}
-		fmt.Fprintln(a.out, "deleted", id)
+		if *mode == "json" {
+			return a.emit(map[string]any{"id": id, "status": status, "confirmed": *wait}, nil)
+		}
+		fmt.Fprintln(a.out, status, id)
 		return 0
 	}
 	var item domain.Instance
-	if action == "stop" {
-		item, err = p.StopInstance(context.Background(), id)
-	} else {
-		item, err = p.RestartInstance(context.Background(), id)
+	switch action {
+	case "get":
+		if reader, ok := p.(interface {
+			GetInstance(context.Context, string) (domain.Instance, error)
+		}); ok {
+			item, err = reader.GetInstance(ctx, id)
+		} else {
+			return a.fail("provider does not support instance inspection")
+		}
+	case "start":
+		if starter, ok := p.(interface {
+			StartInstance(context.Context, string) (domain.Instance, error)
+		}); ok {
+			item, err = starter.StartInstance(ctx, id)
+		} else {
+			return a.fail("provider does not support starting instances")
+		}
+	case "stop":
+		item, err = p.StopInstance(ctx, id)
+	case "restart":
+		item, err = p.RestartInstance(ctx, id)
 	}
 	if err != nil {
 		return a.fail(err.Error())
+	}
+	if *wait && action != "get" {
+		status := domain.StatusRunning
+		if action == "stop" {
+			status = domain.StatusStopped
+		}
+		if waiter, ok := p.(interface {
+			WaitInstance(context.Context, string, string) (domain.Instance, error)
+		}); ok {
+			item, err = waiter.WaitInstance(ctx, id, status)
+		} else {
+			return a.fail("provider does not support instance waiting")
+		}
+		if err != nil {
+			return a.fail(err.Error())
+		}
 	}
 	if *mode == "json" {
 		return a.emit(item, nil)
@@ -860,6 +1138,9 @@ func (a *App) plan(args []string, apply bool) int {
 	if *file == "" {
 		return a.fail("--file is required")
 	}
+	if fs.NArg() != 0 || *mode != "table" && *mode != "json" {
+		return a.fail("plan/apply accepts flags only and --output table|json")
+	}
 	b, err := os.ReadFile(*file)
 	if err != nil {
 		return a.fail(err.Error())
@@ -872,16 +1153,36 @@ func (a *App) plan(args []string, apply bool) int {
 	} else if err := json.Unmarshal(b, &m); err != nil {
 		return a.fail("decode manifest: " + err.Error())
 	}
-	if profile, ok := a.cfg.DefaultProfile(); ok {
-		for i := range m.Servers {
-			m.Servers[i] = m.Servers[i].ResolveDefaults(profile.Provider, profile.Name, profile.Region)
+	profile, ok := a.cfg.DefaultProfile()
+	if !ok {
+		return a.fail("no access profile configured; run setup oracle")
+	}
+	for i := range m.Servers {
+		m.Servers[i] = m.Servers[i].ResolveDefaults(profile.Provider, profile.Name, profile.Region)
+		if m.Servers[i].Access != profile.Name || m.Servers[i].Region != profile.Region || m.Servers[i].Provider != profile.Provider {
+			return a.fail("a plan must target its selected access profile, region, and provider")
+		}
+		if m.Servers[i].StartupScript != "" {
+			path := m.Servers[i].StartupScript
+			if !filepath.IsAbs(path) {
+				path = filepath.Join(filepath.Dir(*file), path)
+			}
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return a.fail("read plan startup script: " + err.Error())
+			}
+			m.Servers[i].UserData = string(data)
 		}
 	}
 	backend, err := a.provider()
 	if err != nil {
 		return a.fail(err.Error())
 	}
-	existing, err := backend.ListInstances(context.Background(), provider.Filter{})
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+	existing, err := backend.ListInstances(ctx, provider.Filter{Access: profile.Name})
 	if err != nil {
 		return a.fail(err.Error())
 	}
@@ -919,7 +1220,7 @@ func (a *App) plan(args []string, apply bool) int {
 		if action.Type != "create" || action.Spec == nil {
 			continue
 		}
-		i, err := backend.CreateInstance(context.Background(), provider.CreateRequest{Spec: *action.Spec, IdempotencyKey: "plan-" + plan.ID + "-" + action.ID})
+		i, err := backend.CreateInstance(ctx, provider.CreateRequest{Spec: *action.Spec, IdempotencyKey: "plan-" + plan.Hash[:48] + "-" + strconv.Itoa(len(results)), UserData: action.Spec.UserData})
 		if err != nil {
 			return a.fail(err.Error())
 		}

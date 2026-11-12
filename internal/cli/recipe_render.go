@@ -14,6 +14,8 @@ func (a *App) renderRecipe(args []string) int {
 	name := fs.String("name", "", "built-in or installed recipe name")
 	file := fs.String("file", "", "recipe YAML or JSON file")
 	port := fs.Int("port", 0, "override the service port")
+	inputsFile := fs.String("inputs", "", "JSON or YAML file containing typed input values")
+	includeSensitive := fs.Bool("include-sensitive", false, "allow supplied sensitive values in rendered output")
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
@@ -34,10 +36,23 @@ func (a *App) renderRecipe(args []string) int {
 			return a.fail(fmt.Sprintf("recipe %q was not found; use list recipes", *name))
 		}
 	}
-	if *port == 0 {
+	values, err := loadRecipeInputs(*inputsFile)
+	if err != nil {
+		return a.fail(err.Error())
+	}
+	if recipeHasSensitiveInputs(item, values) && !*includeSensitive {
+		return a.fail("rendering supplied sensitive inputs requires --include-sensitive; protect the resulting file")
+	}
+	if *port == 0 && values["port"] == nil {
 		*port = recipePort(item)
 	}
-	script, err := recipe.RenderCloudInit(item, *port)
+	options := recipe.RenderOptions{Port: *port, Inputs: values}
+	var script string
+	if item.Execution == "local" {
+		script, err = recipe.RenderLocalScript(item, options)
+	} else {
+		script, err = recipe.RenderCloudInitWithInputs(item, options)
+	}
 	if err != nil {
 		return a.fail("render recipe: " + err.Error())
 	}

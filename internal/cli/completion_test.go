@@ -7,7 +7,7 @@ import (
 
 func TestCompletionCandidates(t *testing.T) {
 	got := completionCandidates([]string{"create"})
-	if !contains(got, "server") || !contains(got, "sandbox") {
+	if !contains(got, "server") || !contains(got, "network") || contains(got, "sandbox") {
 		t.Fatalf("create candidates = %v", got)
 	}
 	if got := completionCandidates(nil); !contains(got, "create") {

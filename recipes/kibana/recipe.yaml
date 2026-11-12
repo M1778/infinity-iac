@@ -1,6 +1,6 @@
 {
   "api_version": "recipe/v1",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "kind": "application",
   "supports": {
     "providers": [
@@ -10,17 +10,14 @@
       "ubuntu-24.04",
       "ubuntu-22.04"
     ],
-    "architectures": [
-      "amd64",
-      "arm64"
-    ]
+    "architectures": []
   },
   "name": "kibana",
   "description": "Elastic observability UI.",
   "inputs": {
     "port": {
       "type": "integer",
-      "description": "Public service port.",
+      "description": "Loopback host port reserved for a completed deployment; this integration remains blocked.",
       "default": 5601,
       "min": 1,
       "max": 65535
@@ -41,30 +38,17 @@
   },
   "steps": [
     {
-      "id": "install-docker",
-      "type": "package",
-      "package": "docker.io"
-    },
-    {
-      "id": "start-kibana",
+      "id": "require-supported-deployment",
       "type": "command",
-      "command": "docker rm -f kibana >/dev/null 2>&1 || true; docker run -d --restart unless-stopped --name kibana -p 127.0.0.1:{{port}}:5601 docker.elastic.co/kibana/kibana:8.15.3"
+      "command": "printf '%s\\n' 'kibana: deployment prerequisites are not yet implemented; inspect recipe requirements.' >&2; exit 1",
+      "timeout_seconds": 10
     }
   ],
-  "health": [
-    {
-      "type": "command",
-      "command": "docker inspect -f '{{.State.Running}}' kibana | grep -q true"
-    }
-  ],
-  "outputs": {
-    "url": {
-      "type": "string",
-      "value": "http://INSTANCE_PUBLIC_IP:{{port}}"
-    }
-  },
+  "health": [],
+  "outputs": {},
   "status": "template",
   "requirements": [
-    "Complete startup/configuration, required services, credentials, persistence, and protocol readiness before deployment. See docs/builtin-catalog.md."
+    "Provide a version-matched supported Elasticsearch cluster and persistent Kibana configuration with a service-account token, CA trust and stable encryption keys.",
+    "Perform authenticated cluster and UI readiness; never start a disconnected Kibana frontend or expose untrusted Elasticsearch credentials."
   ]
 }
