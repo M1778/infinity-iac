@@ -1,112 +1,130 @@
 # Built-in catalog
 
-This page is the release inventory for Infinity-IaC 1.0.1. It describes files
-embedded into the release binary, not recipes that happen to exist in a local
-checkout.
+The current source embeds **137 definitions**: 131 application entries and six
+scripts. **80 application demos and six scripts are experimental; 51 application
+templates remain blocked.** A concrete definition, supported image manifest,
+shell validation, and actual runtime verification are distinct.
 
-## Inventory
+The source targets 1.1.0. Installers use published tags, not this checkout. Use the
+matching binary/command reference when inspecting a recipe.
 
-| Recipe | Kind | File | Status |
-| --- | --- | --- | --- |
-| `n8n` | application | `recipes/n8n/recipe.yaml` | shipped and embedded |
-
-There is no second built-in application and no built-in script recipe in 1.0.1.
-The planned catalog of 100+ popular applications and scripts has not been
-implemented or shipped. Names such as Docker, PostgreSQL, Redis, WordPress,
-Kubernetes, Prometheus, backup, networking, and security scripts are not
-valid built-in recipe names in this release.
-
-Confirm the catalog from the installed binary instead of assuming a roadmap
-item is available:
+## Inspect offline
 
 ```sh
-infinity-iac list recipes
 infinity-iac list recipes --output json
 infinity-iac list capabilities --output json
+infinity-iac recipe render --name nginx --port 8080
+infinity-iac recipe render --name oc-hunter
+infinity-iac run --recipe nginx --dry-run --output json
 ```
 
-The JSON response includes the catalog source. A release binary should report
-`"source": "builtin"` and one recipe named `n8n`. A checkout can report
-`"source": "recipes"`; that is the filesystem catalog and is still only the
-recipe files present in that checkout.
+Every definition is discoverable with status and requirements. Unknown names and
+templates fail before provisioning. `--inputs FILE` supplies validated typed
+values, not executable shell; rendering sensitive values requires explicit
+opt-in. Embedded catalog precedence never silently trusts a current-directory
+recipes folder.
 
-## n8n application recipe
+## Concrete application definitions
 
-Run it with:
+The original 19 improved demos are alertmanager, caddy, changedetection,
+excalidraw, freshrss, gitea, grafana, jellyfin, mariadb, mysql, n8n, nginx, node-red,
+postgres, prometheus, qdrant, redis, registry, and uptime-kuma.
+
+The additional 61 definitions are appsmith, audiobookshelf, baikal, bazarr,
+budibase, cassandra, clickhouse, cockroachdb, code-server, coder, consul, couchdb,
+dashy, directus, dokuwiki, dolibarr, drupal, duplicati, emby, etcd, filebrowser,
+forgejo, ghost, homeassistant, influxdb, jenkins, joomla, jupyter, kafka, kanboard,
+keycloak, komga, kopia, loki, mattermost, meilisearch, metabase, mongodb, nats,
+netdata, nextcloud, nocodb, ollama, open-webui, owncloud, pgadmin, plex, prefect,
+rabbitmq, redmine, searxng, speedtest, stirling-pdf, syncthing, traccar, traefik,
+umami, vaultwarden, vikunja, wallabag, and wordpress.
+
+They bind services to loopback, guard existing container/network/volume
+ownership, preserve named volumes, and use real protocol or HTTP readiness.
+Database-backed recipes supply isolated persistent stacks and wait for DB
+readiness before app startup. Bootstrap credentials are generated and persisted
+in owner-only guest files; they are not retrieved or printed by the CLI. Some
+images are digest-pinned; other explicit version tags still require runtime and
+registry verification. Consult each manifest's declared architectures.
+
+Many demos intentionally stop at installation/onboarding. Complete admin
+creation, configured domains, authenticated TLS, media/model data, backups, and
+production policy yourself before exposing them. Static Excalidraw is not a
+collaboration backend; a local registry is not an authenticated public registry;
+Caddy's default HTTP demo is not automatic production HTTPS. Development-only
+modes and optional app integrations are not production certification.
+
+## Scripts
+
+| Name | Target | Purpose |
+| --- | --- | --- |
+| system-report | New instance | OS, memory, filesystems, sockets. |
+| network-report | New instance | Interfaces, routes, resolver, sockets. |
+| disk-report | New instance | Block devices, filesystem usage, logs. |
+| docker-report | New instance | Docker diagnostic inventory; no pruning. |
+| cloud-init-report | New instance | Status and logs; no reinitialization. |
+| oc-hunter | Local | Bounded explicit OCI capacity allocation with persisted identity. |
+
+Guest diagnostic recipes provision a VM; they do not execute on arbitrary
+existing servers. Local `oc-hunter` requires `--local` in the recipe wrapper and
+uses local credentials, never copying them into cloud-init. The native command
+also offers `--dry-run` and explicit launch confirmation.
+
+## Remaining 51 templates
+
+All remaining templates contain application-specific missing prerequisites and
+no executable Docker placeholders, bogus health claims, or fictitious outputs.
+They are not delivered working integrations.
+
+| Entries | Missing supported deployment work |
+| --- | --- |
+| argocd, awx, opencost, rancher | Kubernetes control plane, scoped credentials, supported charts/operators, persistence and readiness. |
+| authentik, calcom, casdoor, outline | Complete DB/cache/worker dependencies, stable keys and configured identity/calendar/SSO/URLs. |
+| dendrite, matrix-synapse, mastodon, peertube, jitsi | Federation/media components, immutable domains, signing secrets, TLS/SMTP and reviewed networking. |
+| airflow, chatwoot, discourse, docspell, erpnext, espocrm, immich, paperless-ngx, penpot, rocket-chat, seafile, taiga, temporal | Version-matched service/worker stacks, DB/broker initialization, durable assets and actual background readiness. |
+| bookstack, firefly-iii, guacamole, rundeck, superset, xwiki, zabbix | Databases, initialization/encryption/bootstrap and application/worker readiness; guacd/Zabbix components where needed. |
+| drone, gitlab, woodpecker | Persistent authenticated CI and forge/agent configuration with authorized execution backends. |
+| graylog, kibana, opensearch, sonarqube, weaviate | Matching supported dependencies, authenticated durable storage, kernel/resource limits and readiness. |
+| adguard-home, pihole | Authenticated persistent DNS setup, private client/upstream configuration and resolver/capability review. |
+| minio, moodle, strapi, vllm | Supported maintained/licensed or custom-built images; vLLM additionally needs authorized models and GPU/runtime testing. |
+| vault | Durable non-development TLS/Raft operation and explicit initialization/unseal/root-token custody. |
+| phpmyadmin | Authorized DB target, private authentication/session setup and readiness. |
+| restic-rest-server | Authenticated durable repository, policy/TLS and restore testing. |
+| kuma | Duplicate of canonical uptime-kuma; blocked instead of launching a second pretend integration. |
+
+## Network, bootstrap, and cleanup
 
 ```sh
-infinity-iac run --app n8n --yes
+infinity-iac run --recipe nginx --port 8080 --name web-demo --access default --yes
+ssh -N -L 8080:127.0.0.1:8080 ubuntu@INSTANCE_PUBLIC_IP
+infinity-iac instance delete INSTANCE_ID --access default --yes --wait
+infinity-iac network delete NETWORK_ID --access default --yes --wait
 ```
 
-Override the host port, instance name, or add an extra first-boot script:
+Managed network commands provide owned VCN/subnet/gateway/routing/security CRUD.
+Recipe ingress is not an automatic public-firewall request. Restrict SSH to your
+own source and retain outbound package/image access. Use the same access name
+for the network and associated compute profile.
 
-```sh
-infinity-iac run --app n8n \
-  --name workflow-automation \
-  --port 1080 \
-  --startup-script ./n8n-extra.sh \
-  --output json \
-  --yes
-```
+The renderer uses bounded commands/health probes, `set -euo pipefail`, private
+file defaults, a bootstrap lock, and a readiness marker after successful probes.
+Named volumes survive owned container recreation but disappear with VM/boot
+volume deletion. Keep backups and exact IDs until cleanup is independently
+verified.
 
-### What it uses
+## Actual evidence
 
-- **OCI base image:** the image OCID saved by `setup oracle`; the recipe does
-  not select or download an Ubuntu image by name.
-- **OCI shape:** the shape saved by `setup oracle`; the recipe requests 2 vCPU
-  and 2 GB RAM for Flex shapes.
-- **Storage:** 35 GB requested by the recipe, raised to OCI's 50 GB boot-volume
-  minimum by the provider.
-- **Networking:** the configured subnet and a public VNIC. The recipe declares
-  TCP port 5678 as public metadata, but 1.0.1 does not create OCI security-list
-  or network-security-group rules.
+- Representative amd64 Nginx HTTP/restart and Redis restart/recreation
+  persistence passed and test resources were removed.
+- November 10, 2026: first-party owned OCI network setup/create/get/SSH update
+  passed. Independent dependency-ordered cleanup and absent-resource checks
+  passed; personal resources were preserved.
+- ARM VM allocation returned `LimitExceeded` for A1 core/memory service limits.
+  No test VM or boot volume was created; guest application and compute lifecycle
+  tests were not completed.
+- Go schema/render/API/CLI/ownership/race tests and 38 documentation browser
+  cases passed; two desktop mobile-menu cases were intentionally skipped.
 
-### What runs on first boot
-
-The CLI converts the validated recipe to OCI cloud-init user data. The generated
-script performs these operations in order:
-
-1. Updates the Ubuntu package index.
-2. Installs the `docker.io` package.
-3. Starts `docker.n8n.io/n8nio/n8n` as container `n8n` with Docker restart
-   policy `unless-stopped`.
-4. Maps the selected host port to container port 5678.
-5. Runs the declared HTTP health check against `http://127.0.0.1:<port>/` with
-   retries.
-6. Appends the optional `--startup-script` content, if supplied.
-
-The OCI launch request returning successfully means the instance was accepted
-by OCI. It does not mean Docker, n8n, or the health check has finished. Inspect
-the instance's cloud-init output and Docker logs when the service is not ready.
-
-### Declared outputs
-
-The recipe declares a public URL and an `admin_password` secret output. These
-are recipe metadata in 1.0.1. Infinity-IaC does not yet discover the public IP
-after boot, generate or retrieve the password, or print a ready-to-use URL.
-Use `list instances --output json` to obtain the public IP after OCI reports it,
-then apply your own n8n authentication and secret handling.
-
-## Why a name may not work
-
-`run --app NAME` and `run --script NAME` both look up `NAME` in the same
-validated catalog. Unknown names fail before provisioning. The `--script` flag
-does not currently require `kind: script`; it is simply another recipe-name
-selector. A custom recipe can be tested without modifying the binary:
-
-```sh
-infinity-iac validate recipe --file ./my-recipes/postgres/recipe.yaml
-INFINITY_IAC_RECIPES=./my-recipes infinity-iac list recipes
-INFINITY_IAC_RECIPES=./my-recipes infinity-iac run --app postgres --yes
-```
-
-Custom recipes are not built-ins. To ship one in a release, add its validated
-recipe file under `recipes/<name>/`, include it in `recipes/embed.go`, add tests,
-and update this inventory.
-
-## Planned catalog
-
-The 100+ catalog remains a TODO. Each recipe needs supported OCI image and
-architecture metadata, resource sizing, package or container provenance,
-idempotent bootstrap commands, health checks, ingress requirements, outputs,
-cleanup guidance, and CI coverage before it can be called production-ready.
+No catalog entry is promoted to fully verified by these representative results.
+The remaining runtime/platform and integration gaps stay visible in
+[TODO](../TODO.md).

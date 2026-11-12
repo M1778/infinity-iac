@@ -1,0 +1,44 @@
+{
+  "api_version": "recipe/v1",
+  "name": "oc-hunter",
+  "version": "1.0.0",
+  "kind": "script",
+  "execution": "local",
+  "status": "experimental",
+  "description": "Bounded local OCI capacity helper that creates one exact managed instance without copying credentials into a guest.",
+  "supports": {
+    "providers": ["oracle"],
+    "os": ["linux", "darwin"],
+    "architectures": ["amd64", "arm64"]
+  },
+  "requirements": [
+    "A validated named OCI compute profile with an explicit compatible image, subnet, and SSH public key.",
+    "VM.Standard.A1.Flex or VM.Standard.E2.1.Micro eligibility and cost must be checked in your tenancy; no free-tier guarantee is implied.",
+    "Keep the private operation journal after interruptions; uncertain launches are not automatically repeated."
+  ],
+  "inputs": {
+    "access": {"type": "string", "default": "", "description": "Named Infinity-IaC OCI profile; empty selects the default."},
+    "name": {"type": "string", "default": "oc-hunter", "description": "Unique managed instance name."},
+    "availability_domains": {"type": "string", "default": "", "description": "Comma-separated exact domain names; empty selects the profile domain."},
+    "shape": {"type": "string", "default": "", "description": "Supported A1 or Micro shape; empty selects the profile shape."},
+    "cpu": {"type": "integer", "default": 2, "min": 1, "max": 4},
+    "ram_gb": {"type": "integer", "default": 12, "min": 1, "max": 24},
+    "storage_gb": {"type": "integer", "default": 50, "min": 50, "max": 200},
+    "interval_seconds": {"type": "integer", "default": 60, "min": 30, "max": 1800},
+    "attempts": {"type": "integer", "default": 20, "min": 1, "max": 100},
+    "timeout_seconds": {"type": "integer", "default": 1800, "min": 1, "max": 28800},
+    "state_file": {"type": "string", "default": "", "description": "Private journal path; empty selects the profile operation directory."},
+    "yes": {"type": "boolean", "default": false},
+    "dry_run": {"type": "boolean", "default": false},
+    "output": {"type": "string", "default": "table"}
+  },
+  "resources": {},
+  "steps": [
+    {
+      "id": "hunt-capacity",
+      "type": "command",
+      "timeout_seconds": 28860,
+      "command": "exec \"${INFINITY_IAC_BINARY:-infinity-iac}\" oc-hunter --access \"$INFINITY_INPUT_ACCESS\" --name \"$INFINITY_INPUT_NAME\" --availability-domains \"$INFINITY_INPUT_AVAILABILITY_DOMAINS\" --shape \"$INFINITY_INPUT_SHAPE\" --cpu \"$INFINITY_INPUT_CPU\" --ram \"${INFINITY_INPUT_RAM_GB}GB\" --storage-size \"${INFINITY_INPUT_STORAGE_GB}GB\" --interval \"${INFINITY_INPUT_INTERVAL_SECONDS}s\" --attempts \"$INFINITY_INPUT_ATTEMPTS\" --timeout \"${INFINITY_INPUT_TIMEOUT_SECONDS}s\" --state-file \"$INFINITY_INPUT_STATE_FILE\" --yes=\"$INFINITY_INPUT_YES\" --dry-run=\"$INFINITY_INPUT_DRY_RUN\" --output \"$INFINITY_INPUT_OUTPUT\""
+    }
+  ]
+}

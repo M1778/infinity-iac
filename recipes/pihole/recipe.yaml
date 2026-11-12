@@ -1,0 +1,54 @@
+{
+  "api_version": "recipe/v1",
+  "version": "1.1.0",
+  "kind": "application",
+  "supports": {
+    "providers": [
+      "oracle"
+    ],
+    "os": [
+      "ubuntu-24.04",
+      "ubuntu-22.04"
+    ],
+    "architectures": []
+  },
+  "name": "pihole",
+  "description": "DNS sinkhole.",
+  "inputs": {
+    "port": {
+      "type": "integer",
+      "description": "Loopback host port reserved for a completed deployment; this integration remains blocked.",
+      "default": 80,
+      "min": 1,
+      "max": 65535
+    }
+  },
+  "resources": {
+    "specs": "ibase2",
+    "cpu": 2,
+    "ram_gb": 2,
+    "storage_gb": 30,
+    "ingress": [
+      {
+        "port": 80,
+        "protocol": "tcp",
+        "source": "loopback"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "require-supported-deployment",
+      "type": "command",
+      "command": "printf '%s\\n' 'pihole: deployment prerequisites are not yet implemented; inspect recipe requirements.' >&2; exit 1",
+      "timeout_seconds": 10
+    }
+  ],
+  "health": [],
+  "outputs": {},
+  "status": "template",
+  "requirements": [
+    "Persist /etc/pihole and version-compatible configuration with generated web administrator password and explicitly chosen private DNS clients/upstreams.",
+    "Review TCP/UDP 53 conflicts and capabilities before DNS service; do not implicitly enable public DNS, DHCP, host networking or network-admin privileges."
+  ]
+}

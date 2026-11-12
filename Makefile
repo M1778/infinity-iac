@@ -22,7 +22,7 @@ vet:
 	$(GO) vet ./...
 
 fmt-check:
-	test -z "$$($(GO)fmt -l ./cmd ./internal ./recipes)"
+	test -z "$$(gofmt -l ./cmd ./internal ./recipes ./infinityiac.go ./infinityiac_test.go)"
 
 validate-recipes:
 	$(GO) run ./cmd/infinity-iac list recipes --output json

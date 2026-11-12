@@ -1,7 +1,14 @@
 # Build output
 /bin/
 /dist/
+/node_modules/
+/playwright-report/
+/test-results/
 *.test
+
+# Local development sessions
+/.claude/
+/.playwright-cli/
 
 # Local Infinity-IaC state and credentials
 config.json

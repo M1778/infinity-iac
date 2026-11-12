@@ -1,0 +1,54 @@
+{
+  "api_version": "recipe/v1",
+  "version": "1.1.0",
+  "kind": "application",
+  "supports": {
+    "providers": [
+      "oracle"
+    ],
+    "os": [
+      "ubuntu-24.04",
+      "ubuntu-22.04"
+    ],
+    "architectures": []
+  },
+  "name": "peertube",
+  "description": "Federated video platform.",
+  "inputs": {
+    "port": {
+      "type": "integer",
+      "description": "Loopback host port reserved for a completed deployment; this integration remains blocked.",
+      "default": 9000,
+      "min": 1,
+      "max": 65535
+    }
+  },
+  "resources": {
+    "specs": "ibase2",
+    "cpu": 2,
+    "ram_gb": 2,
+    "storage_gb": 30,
+    "ingress": [
+      {
+        "port": 9000,
+        "protocol": "tcp",
+        "source": "loopback"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "require-supported-deployment",
+      "type": "command",
+      "command": "printf '%s\\n' 'peertube: deployment prerequisites are not yet implemented; inspect recipe requirements.' >&2; exit 1",
+      "timeout_seconds": 10
+    }
+  ],
+  "health": [],
+  "outputs": {},
+  "status": "template",
+  "requirements": [
+    "Deploy matching PeerTube, PostgreSQL and Redis with persistent media/configuration, generated secrets and initialized application data.",
+    "Provide federation hostname, SMTP, TLS and deliberately configured storage/transcoding resource limits; verify upload, worker and playback paths."
+  ]
+}

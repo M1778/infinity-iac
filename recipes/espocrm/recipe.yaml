@@ -1,0 +1,54 @@
+{
+  "api_version": "recipe/v1",
+  "version": "1.1.0",
+  "kind": "application",
+  "supports": {
+    "providers": [
+      "oracle"
+    ],
+    "os": [
+      "ubuntu-24.04",
+      "ubuntu-22.04"
+    ],
+    "architectures": []
+  },
+  "name": "espocrm",
+  "description": "CRM platform.",
+  "inputs": {
+    "port": {
+      "type": "integer",
+      "description": "Loopback host port reserved for a completed deployment; this integration remains blocked.",
+      "default": 80,
+      "min": 1,
+      "max": 65535
+    }
+  },
+  "resources": {
+    "specs": "ibase2",
+    "cpu": 2,
+    "ram_gb": 2,
+    "storage_gb": 30,
+    "ingress": [
+      {
+        "port": 80,
+        "protocol": "tcp",
+        "source": "loopback"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "require-supported-deployment",
+      "type": "command",
+      "command": "printf '%s\\n' 'espocrm: deployment prerequisites are not yet implemented; inspect recipe requirements.' >&2; exit 1",
+      "timeout_seconds": 10
+    }
+  ],
+  "health": [],
+  "outputs": {},
+  "status": "template",
+  "requirements": [
+    "Deploy persistent EspoCRM with a supported MariaDB/MySQL database, matching daemon/background processing, configured site URL and bootstrap administrator.",
+    "Run the documented initialization/migrations and configure email/TLS; verify scheduled jobs and authenticated application readiness."
+  ]
+}

@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-var topLevelCommands = []string{"setup", "unlink", "list", "create", "run", "network", "instance", "sandbox", "wrap", "install", "app", "update", "plan", "apply", "import", "recipe", "validate", "doctor", "completion", "version", "help"}
+var topLevelCommands = []string{"setup", "unlink", "list", "create", "run", "network", "instance", "oc-hunter", "install", "app", "update", "plan", "apply", "recipe", "validate", "doctor", "completion", "version", "help"}
 
 // complete is a shell-neutral protocol: one candidate per line. Shell
 // adapters do prefix filtering and turn these candidates into native menus.
@@ -32,17 +32,32 @@ func completionCandidates(words []string) []string {
 	command := words[0]
 	if len(words) > 1 {
 		switch command {
+		case "setup":
+			if words[1] == "oracle" {
+				return []string{"--autodetect", "--name", "--profile", "--account", "--config", "--region", "--compartment", "--subnet", "--availability-domain", "--image", "--shape", "--ssh-public-key", "--network-only", "help"}
+			}
 		case "list":
 			if words[1] == "recipes" || words[1] == "capabilities" {
 				return []string{"--root", "--output", "--output=json", "help"}
 			}
 		case "recipe":
+			if words[1] == "render" {
+				return []string{"--name", "--file", "--port", "--inputs", "--include-sensitive", "help"}
+			}
 			if words[1] == "validate" {
 				return []string{"--file", "--output", "--output=json", "help"}
 			}
 		case "validate":
 			if words[1] == "recipe" {
 				return []string{"--file", "--output", "--output=json", "help"}
+			}
+		case "instance":
+			return []string{"--access", "--wait", "--timeout", "--yes", "--output", "help"}
+		case "network":
+			return []string{"--access", "--name", "--cidr", "--subnet-cidr", "--ssh-source", "--wait", "--timeout", "--yes", "--output", "help"}
+		case "create":
+			if words[1] == "server" {
+				return []string{"--name", "--access", "--cpu", "--ram", "--storage-size", "--provider", "--region", "--startup-script", "--port", "--amount", "--yes", "--output", "help"}
 			}
 		case "app":
 			if words[1] == "install" {
@@ -52,27 +67,25 @@ func completionCandidates(words []string) []string {
 	}
 	switch command {
 	case "setup":
-		return []string{"oracle", "backup", "help"}
+		return []string{"oracle", "help"}
 	case "unlink":
 		return []string{"acc", "access", "help"}
 	case "list":
-		return []string{"acc", "access", "instances", "recipes", "capabilities", "help", "--output", "--output=json"}
+		return []string{"acc", "access", "instances", "networks", "recipes", "capabilities", "help", "--access", "--output", "--output=json"}
 	case "recipe":
-		return []string{"list", "validate", "help"}
+		return []string{"list", "validate", "render", "help"}
 	case "validate":
 		return []string{"recipe", "help"}
 	case "create":
-		return []string{"server", "sandbox", "network", "help"}
+		return []string{"server", "network", "help"}
 	case "run":
-		return []string{"--app", "--script", "--specs", "--port", "--name", "--startup-script", "--yes", "--output", "help"}
+		return []string{"--app", "--script", "--recipe", "--specs", "--port", "--name", "--access", "--inputs", "--local", "--dry-run", "--startup-script", "--yes", "--output", "help"}
 	case "instance":
-		return []string{"stop", "restart", "delete", "help"}
+		return []string{"get", "start", "stop", "restart", "delete", "help"}
 	case "network":
-		return []string{"create", "list", "delete", "help"}
-	case "sandbox":
-		return []string{"create", "list", "delete", "help"}
-	case "wrap":
-		return []string{"--script", "--multi", "help"}
+		return []string{"create", "list", "get", "update", "delete", "help"}
+	case "oc-hunter":
+		return []string{"--access", "--name", "--availability-domains", "--cpu", "--ram", "--storage-size", "--interval", "--attempts", "--timeout", "--state-file", "--dry-run", "--yes", "--output", "help"}
 	case "install":
 		return []string{"skills", "completion", "help"}
 	case "app":

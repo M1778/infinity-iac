@@ -43,8 +43,8 @@ func TestDiscoverRecipes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(items) != 1 || items[0].Name != "n8n" {
-		t.Fatalf("unexpected recipes: %+v", items)
+	if len(items) < 100 {
+		t.Fatalf("unexpected recipe count: %d", len(items))
 	}
 }
 
@@ -52,5 +52,28 @@ func TestCatalogRejectsDuplicateNames(t *testing.T) {
 	r := Recipe{APIVersion: APIVersion, Name: "x", Version: "1.0.0", Kind: "script", Steps: []Step{{ID: "run", Type: "command", Command: "true"}}}
 	if _, err := NewCatalog([]Recipe{r, r}); err == nil {
 		t.Fatal("expected duplicate recipe name to fail")
+	}
+}
+
+func TestRecipeNamesAreSafeForReadinessFiles(t *testing.T) {
+	for _, name := range []string{"../bad", "bad/name", ".", "..", "bad name", "bad\nname"} {
+		r := Recipe{APIVersion: APIVersion, Name: name, Version: "1.0.0", Kind: "script", Steps: []Step{{ID: "run", Type: "command", Command: "true"}}}
+		if err := r.Validate(); err == nil {
+			t.Fatalf("unsafe recipe name %q accepted", name)
+		}
+	}
+}
+
+func TestTemplateRequiresDocumentedRequirements(t *testing.T) {
+	r := Recipe{APIVersion: APIVersion, Name: "template", Version: "1.0.0", Kind: "application", Status: "template", Steps: []Step{{ID: "run", Type: "command", Command: "true"}}}
+	if err := r.Validate(); err == nil {
+		t.Fatal("template without requirements was accepted")
+	}
+	r.Requirements = []string{"Configure a database"}
+	if err := r.Validate(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := RenderCloudInit(r, 80); err == nil {
+		t.Fatal("incomplete template was rendered")
 	}
 }

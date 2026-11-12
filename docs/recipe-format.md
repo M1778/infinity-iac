@@ -1,152 +1,161 @@
 # Recipe format
 
-Recipes are YAML or JSON documents with `api_version: recipe/v1`. They are
-validated before they appear in `list recipes` and before `run` creates an OCI
-instance. A recipe must contain at least one step and must have a unique name
-within the selected catalog.
+Recipes are YAML or JSON with `api_version: recipe/v1`, a unique safe name,
+version, kind, supported targets, and at least one step. They are validated
+before rendering or launching. Templates require application-specific
+`requirements` and are always blocked.
 
-## Catalog selection
+## Catalog and execution
 
-Release binaries include the validated built-in catalog. In 1.0.1 it contains
-only `n8n`; the 100+ application and script catalog is planned, not shipped.
-When running from a checkout, the CLI uses a `recipes/` directory if it exists. Set
-`INFINITY_IAC_RECIPES` or pass `--root` to inspect another catalog:
+The current embedded catalog has 137 definitions: 131 application entries and
+six scripts. 80 app demos and six scripts are experimental; 51 templates remain
+incomplete. Source counts are not runtime certification. The installer downloads
+published tags, not the checkout.
 
-```sh
-INFINITY_IAC_RECIPES="$PWD/my-recipes" infinity-iac list recipes
-infinity-iac list recipes --root ./my-recipes --output json
-infinity-iac validate recipe --file ./my-recipes/demo/recipe.yaml
-```
+Resolution uses an explicit inspection `--root`, then `INFINITY_IAC_RECIPES`, then
+embedded recipes and locally installed apps. A current-directory recipes folder
+never silently replaces executable definitions.
 
-`run` uses the same catalog resolution rules. Validate a custom catalog before
-using it in automation.
+`execution` defaults to `instance`. `execution: local` is allowed only for script
+recipes and uses explicit local execution; it never provisions a VM. Local
+recipes support command steps only, not implicit package/file writes.
 
-## Schema
+## Schema example
 
 ```yaml
 api_version: recipe/v1
 name: demo
 version: 1.0.0
-kind: application                 # application or script
-description: Example service
+kind: application
+execution: instance
+status: experimental
+description: Configured loopback service
 supports:
   providers: [oracle]
-  os: [ubuntu-latest, ubuntu-24.04]
+  os: [ubuntu-24.04, ubuntu-22.04]
   architectures: [amd64, arm64]
 inputs:
   port:
-    type: integer                  # string, integer, or boolean
-    description: Service port
+    type: integer
     default: 8080
     min: 1
     max: 65535
+  message:
+    type: string
+    required: true
+  token:
+    type: string
+    required: true
+    sensitive: true
 resources:
-  specs: ibase2                    # catalog metadata; run uses cpu/ram/storage
   cpu: 2
-  ram_gb: 2
-  storage_gb: 40
+  ram_gb: 4
+  storage_gb: 50
   ingress:
     - port: 8080
-      protocol: tcp                # tcp or udp
-      source: public
+      protocol: tcp
+      source: loopback
 steps:
-  - id: install-curl
-    type: package                  # package, command, or upload
+  - id: package
+    type: package
     package: curl
-  - id: install-service
+  - id: config
+    type: file
+    destination: /etc/demo.conf
+    mode: "0600"
+    content: |
+      listen=127.0.0.1
+  - id: start
     type: command
-    command: /usr/local/bin/demo --port {{port}}
-  - id: write-config
-    type: upload
-    source: ./demo.conf             # read on the machine running the CLI
-    destination: /etc/demo/demo.conf
-    timeout_seconds: 30
+    command: /usr/local/bin/demo --port {{port}} --message "$INFINITY_INPUT_MESSAGE"
+    timeout_seconds: 180
 health:
-  - type: http                     # http or command
+  - type: http
     port: 8080
-    path: /
+    path: /health
     timeout_seconds: 120
 outputs:
   url:
     type: string
-    value: http://${instance.public_ip}:8080
-  token:
-    type: secret
-    value: generated
-    sensitive: true
+    value: http://127.0.0.1:{{port}}
 ```
 
-### Metadata and resources
+This is a format example, not a shipped demo executable.
 
-`supports` documents the provider, OS labels, and architectures a recipe is
-intended for. The current OCI runner selects the image and shape from the
-configured access profile, then uses `resources.cpu`, `resources.ram_gb`, and
-`resources.storage_gb` for the instance request. Missing or non-positive
-resource values fall back to 1 vCPU, 1 GB RAM, and 20 GB storage. OCI may apply
-its own minimums, including the 50 GB boot-volume minimum.
+## Typed inputs and secrets
 
-`resources.ingress` is validated and listed as recipe metadata. It does not yet
-create OCI security-list or network-security-group rules, so open the required
-port in the subnet separately.
+Input names use lowercase letters, digits, and underscores. Types are `string`,
+`integer`, and `boolean`. Values come from a JSON/YAML object through `--inputs`.
+Unknown fields, wrong types, out-of-range integers, missing/empty required
+strings, NUL bytes, and oversized text fail before execution. Sensitive inputs
+cannot declare defaults in source.
 
-### Steps
-
-- `package` runs `apt-get update` and installs the named package on the Ubuntu
-  instance.
-- `command` writes the command into the generated cloud-init script.
-- `upload` reads `source` locally, base64-encodes it, and writes it to the
-  absolute `destination` on first boot.
-
-The `{{port}}` token is replaced with the selected port. `--port` overrides the
-recipe's `port` input default. Recipe commands run as root through cloud-init;
-quote or validate values before placing them in a command.
-
-The schema accepts other typed inputs for catalog validation, but 1.0.1 only
-resolves the `port` default and token. Step `timeout_seconds` values are
-validated and retained in the recipe; the generated script does not yet wrap
-each individual step in a timeout.
-
-Health checks are appended to the same first-boot script. HTTP checks use
-localhost and retry with `curl`; command checks run directly. A successful OCI
-launch does not mean that cloud-init has finished, so inspect the instance and
-its cloud-init logs when a service is not ready.
-
-## Running a recipe
+Values are exported as shell-quoted `INFINITY_INPUT_<UPPERCASE_NAME>` variables.
+An explicit `environment` must remain in that reserved namespace and be unique.
+Commands must quote variable references. User text is never expanded as shell
+syntax; only numeric `{{port}}` substitution is supported. Other raw text tokens
+are rejected. Literal file `content` is base64 encoded, not evaluated or
+interpolated.
 
 ```sh
-infinity-iac run --app demo --port 8080 --name demo --yes
-infinity-iac run --app n8n --startup-script ./extra.sh --output json --yes
+infinity-iac recipe render --file recipe.yaml --inputs values.json
+infinity-iac run --recipe demo --inputs values.yaml --dry-run
 ```
 
-`--specs` currently accepts only `auto`; the recipe resources are used. An
-unknown recipe fails before an OCI create request. `--startup-script` is read
-locally and appended to the generated cloud-init script. Both `--app` and
-`--script` select a recipe by name; the flag does not currently filter on the
-recipe's `kind` field.
+Rendering supplied sensitive values requires `--include-sensitive`; protect the
+resulting output file. Normal errors must not echo input values. Rendered scripts
+and provider metadata can contain supplied credentials: never publish them or
+send them to shared logs. Catalog outputs describe metadata, not retrieved guest
+secrets.
 
-## Built-in example
+## Steps, limits, and health
 
-The release catalog contains `n8n`, which installs Docker and starts n8n on its
-configured port:
+- `package`: validates a package identifier, batches apt update/install with
+  bounded waits and lock timeouts, and enables Docker for `docker.io`.
+- `command`: executes reviewed commands with `set -euo pipefail`; declared
+  `timeout_seconds` wraps a bounded shell.
+- `upload`: reads `source` on the caller, writes base64-decoded bytes to an
+  absolute guest destination, and applies the selected mode.
+- `file`: writes literal inline content to an absolute guest destination.
+
+File mode defaults to `0600`; allowed modes are `0600`, `0640`, `0644`, `0700`,
+and `0755`. Symlink destinations are rejected. Local scripts cannot declare
+file/upload/package steps. Remote third-party upload bundles are rejected;
+local app installation copies absolute upload sources into private storage.
+
+Guest bootstraps serialize with `flock`, clear stale readiness markers, and run
+bounded HTTP or command probes. HTTP requests use loopback and connect/request
+timeouts. Command attempts are bounded. Completion writes
+`/var/lib/infinity-iac/ready/NAME`; failure does not. OCI launch acceptance is not
+application readiness.
+
+Resources request vCPU/RAM/storage from the configured profile. A1 and x86 OCPU
+ratios differ; OCI minimums may raise actual allocation, including 50 GB boot
+storage. `supports` declares intended targets and is preflight-checked, not a
+claim of runtime certification. `ingress` remains recipe metadata: managed
+network commands separately provision reviewed SSH/outbound rules, not public
+application ports.
+
+## Run and persistence
 
 ```sh
-infinity-iac list recipes
-infinity-iac run --app n8n --port 5678 --yes
+infinity-iac run --app nginx --access default --port 8080 --yes
+infinity-iac run --script system-report --name diagnostics --yes
+infinity-iac run --script oc-hunter --local --inputs hunter.json --dry-run
 ```
 
-The recipe's declared URL and secret outputs are catalog metadata in 1.0.1; the
-CLI does not yet retrieve generated values from the running instance.
+Exactly one selector is required; app/script selectors enforce kind. Instance
+recipes create a new VM. Local recipes require `--local` for real execution.
+`--dry-run` validates without allocation or command execution; it does not prove
+cloud permissions, image availability, or runtime functionality.
 
-## Catalog expansion status
+Use ownership checks before recreating containers, bridge networks, or named
+volumes. Dependent apps must wait for authenticated DB/broker readiness before
+launching, not merely at the final health stage. Named volumes survive container
+recreation but not deleting the VM/boot volume. Complete administrator setup,
+TLS, backups, and appropriate network policy before production use.
 
-There is currently one built-in recipe file, `recipes/n8n/recipe.yaml`. Adding a
-recipe to a local directory does not add it to release binaries. A built-in
-must be reviewed, placed under `recipes/<name>/recipe.yaml`, included by
-`recipes/embed.go`, and covered by catalog validation and execution tests. The
-planned 100+ catalog should be delivered in batches so every app and script has
-an owner, supported OCI image and architecture, resource sizing, ports and
-network requirements, health checks, and a documented rollback or cleanup
-path.
-
-See [the built-in catalog](builtin-catalog.md) for the exact release inventory
-and the complete first-boot behavior of `n8n`.
+`experimental` is controlled evaluation. `verified` requires exact version,
+platform, readiness, functional behavior, and persistence/recovery evidence.
+Untested domains, GPUs, clusters, or custom builds must remain explicit
+prerequisites or blocked templates, not pass by omission.

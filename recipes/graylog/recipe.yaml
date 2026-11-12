@@ -1,0 +1,54 @@
+{
+  "api_version": "recipe/v1",
+  "version": "1.1.0",
+  "kind": "application",
+  "supports": {
+    "providers": [
+      "oracle"
+    ],
+    "os": [
+      "ubuntu-24.04",
+      "ubuntu-22.04"
+    ],
+    "architectures": []
+  },
+  "name": "graylog",
+  "description": "Centralized log management.",
+  "inputs": {
+    "port": {
+      "type": "integer",
+      "description": "Loopback host port reserved for a completed deployment; this integration remains blocked.",
+      "default": 9000,
+      "min": 1,
+      "max": 65535
+    }
+  },
+  "resources": {
+    "specs": "ibase2",
+    "cpu": 2,
+    "ram_gb": 2,
+    "storage_gb": 30,
+    "ingress": [
+      {
+        "port": 9000,
+        "protocol": "tcp",
+        "source": "loopback"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "require-supported-deployment",
+      "type": "command",
+      "command": "printf '%s\\n' 'graylog: deployment prerequisites are not yet implemented; inspect recipe requirements.' >&2; exit 1",
+      "timeout_seconds": 10
+    }
+  ],
+  "health": [],
+  "outputs": {},
+  "status": "template",
+  "requirements": [
+    "Deploy compatible Graylog, MongoDB and the version-supported Data Node/OpenSearch search backend with persistent journals and search/database data.",
+    "Generate password secret/admin hash, configure host kernel limits and collector inputs deliberately, and verify search/ingest and authenticated UI readiness."
+  ]
+}

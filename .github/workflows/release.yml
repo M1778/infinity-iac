@@ -5,7 +5,7 @@ on:
     tags: ['v*.*.*']
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release-${{ github.ref }}
@@ -40,6 +40,15 @@ jobs:
           go-version: '1.24.x'
           cache: true
 
+      - name: Verify release source
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          test "$(go run ./cmd/infinity-iac --version)" = "$version"
+          go vet ./...
+          go test ./...
+
       - name: Build release binary
         env:
           GOOS: ${{ matrix.goos }}
@@ -50,7 +59,11 @@ jobs:
           mkdir -p dist
           ext=""
           if [ "$GOOS" = "windows" ]; then ext=".exe"; fi
-          go build -trimpath -ldflags="-s -w" -o "dist/infinity-iac_${GOOS}_${GOARCH}${ext}" ./cmd/infinity-iac
+          version="${GITHUB_REF_NAME#v}"
+          go build -trimpath -ldflags="-s -w -X github.com/M1778/infinity-iac/internal/cli.Version=$version" -o "dist/infinity-iac_${GOOS}_${GOARCH}${ext}" ./cmd/infinity-iac
+          if [ "$GOOS/$GOARCH" = "linux/amd64" ]; then
+            test "$(./dist/infinity-iac_linux_amd64 --version)" = "$version"
+          fi
           if [ "$GOOS" = "windows" ]; then
             sha256sum "dist/infinity-iac_${GOOS}_${GOARCH}${ext}" > "dist/infinity-iac_${GOOS}_${GOARCH}.sha256"
           fi
@@ -64,6 +77,8 @@ jobs:
   publish:
     name: Publish GitHub release
     needs: [build, windows-installer]
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - name: Check out installer sources
@@ -75,6 +90,10 @@ jobs:
           pattern: release-*
           path: dist
           merge-multiple: true
+
+      - name: Prepare Unix binaries
+        shell: bash
+        run: chmod 0755 dist/infinity-iac_linux_* dist/infinity-iac_darwin_*
 
       - name: Add Unix installer
         shell: bash
@@ -93,7 +112,7 @@ jobs:
         run: sha256sum * > SHA256SUMS
 
       - name: Verify release artifacts
-        run: ./scripts/verify-release.sh dist
+        run: ./scripts/verify-release.sh dist "${GITHUB_REF_NAME#v}"
 
       - name: Publish release
         env:
@@ -122,6 +141,9 @@ jobs:
           $expected = (Get-Content 'dist/infinity-iac_windows_amd64.sha256').Split()[0].ToLowerInvariant()
           $actual = (Get-FileHash $binary.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($actual -ne $expected) { throw "Windows binary checksum verification failed" }
+          $version = ${env:GITHUB_REF_NAME}.TrimStart('v')
+          $reported = & 'dist/infinity-iac_windows_amd64.exe' --version
+          if ($LASTEXITCODE -ne 0 -or $reported.Trim() -ne $version) { throw "Windows binary version does not match release tag" }
 
       - name: Install Inno Setup
         shell: pwsh
@@ -135,6 +157,42 @@ jobs:
           if (-not (Test-Path $iscc)) { $iscc = 'iscc.exe' }
           & $iscc "/DAppVersion=$version" "/DSourceBinary=$((Resolve-Path 'dist/infinity-iac_windows_amd64.exe').Path)" installer/infinity-iac.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Test Windows installation and uninstallation
+        shell: pwsh
+        run: |
+          $version = ${env:GITHUB_REF_NAME}.TrimStart('v')
+          $installDir = Join-Path $env:RUNNER_TEMP "infinity-iac-install-$([guid]::NewGuid())"
+          $originalPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+          $originalConfig = $env:INFINITY_IAC_CONFIG
+          $env:INFINITY_IAC_CONFIG = Join-Path $installDir 'smoke-config.json'
+          try {
+            $setup = Start-Process -FilePath (Resolve-Path 'dist/infinity-iac-setup.exe').Path -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/NOICONS', '/TASKS=addtopath', "/DIR=`"$installDir`"") -Wait -PassThru
+            if ($setup.ExitCode -ne 0) { throw "Windows installer failed with exit code $($setup.ExitCode)" }
+            $installedPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+            if ($installedPath.Split(';') -notcontains $installDir) { throw 'Installer did not add the requested user PATH entry' }
+            $binary = Join-Path $installDir 'infinity-iac.exe'
+            $reported = & $binary --version
+            if ($LASTEXITCODE -ne 0 -or $reported.Trim() -ne $version) { throw 'Installed Windows version does not match release tag' }
+            $catalog = & $binary list recipes --output json
+            if ($LASTEXITCODE -ne 0) { throw 'Installed Windows catalog failed' }
+            $items = ($catalog | ConvertFrom-Json).recipes
+            if (@($items).Count -ne 137) { throw 'Installed Windows catalog is incomplete' }
+            $rendered = & $binary recipe render --name oc-hunter
+            if ($LASTEXITCODE -ne 0 -or -not ($rendered -match 'oc-hunter')) { throw 'Installed Windows local recipe rendering failed' }
+          } finally {
+            $uninstaller = Join-Path $installDir 'unins000.exe'
+            try {
+              if (Test-Path -LiteralPath $uninstaller) {
+                $uninstall = Start-Process -FilePath $uninstaller -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART') -Wait -PassThru
+                if ($uninstall.ExitCode -ne 0) { throw "Windows uninstaller failed with exit code $($uninstall.ExitCode)" }
+              }
+              if (Test-Path -LiteralPath (Join-Path $installDir 'infinity-iac.exe')) { throw 'Windows uninstall left the installed binary behind' }
+              if ([Environment]::GetEnvironmentVariable('Path', 'User') -cne $originalPath) { throw 'Windows uninstall did not restore the user PATH' }
+            } finally {
+              $env:INFINITY_IAC_CONFIG = $originalConfig
+            }
+          }
 
       - name: Upload Windows installer
         uses: actions/upload-artifact@v7

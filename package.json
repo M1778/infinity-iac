@@ -1,0 +1,15 @@
+{
+  "name": "infinity-iac-docs-tests",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test:docs": "playwright test",
+    "test:docs:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

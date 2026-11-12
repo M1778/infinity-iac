@@ -7,7 +7,7 @@ import (
 
 func TestCompletionCandidates(t *testing.T) {
 	got := completionCandidates([]string{"create"})
-	if !contains(got, "server") || !contains(got, "sandbox") {
+	if !contains(got, "server") || !contains(got, "network") || contains(got, "sandbox") {
 		t.Fatalf("create candidates = %v", got)
 	}
 	if got := completionCandidates(nil); !contains(got, "create") {
@@ -49,4 +49,20 @@ func contains(values []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func TestNewRecipeAndSetupFlagsAreCompleted(t *testing.T) {
+	for _, item := range []struct {
+		words []string
+		flag  string
+	}{
+		{[]string{"run"}, "--recipe"},
+		{[]string{"recipe"}, "render"},
+		{[]string{"recipe", "render"}, "--name"},
+		{[]string{"setup", "oracle"}, "--autodetect"},
+	} {
+		if got := completionCandidates(item.words); !contains(got, item.flag) {
+			t.Fatalf("completion %v missing %s: %v", item.words, item.flag, got)
+		}
+	}
 }

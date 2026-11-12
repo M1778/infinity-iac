@@ -1,0 +1,39 @@
+{
+  "api_version": "recipe/v1",
+  "name": "docker-report",
+  "version": "1.0.0",
+  "kind": "script",
+  "status": "experimental",
+  "description": "Read-only Docker engine, container, and storage diagnostics; never prunes resources.",
+  "supports": {
+    "providers": [
+      "oracle"
+    ],
+    "os": [
+      "ubuntu-24.04",
+      "ubuntu-22.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "resources": {
+    "cpu": 1,
+    "ram_gb": 1,
+    "storage_gb": 30
+  },
+  "steps": [
+    {
+      "id": "install",
+      "type": "package",
+      "package": "docker.io"
+    },
+    {
+      "id": "report",
+      "type": "command",
+      "command": "docker version\ndocker info\ndocker ps -a\ndocker system df",
+      "timeout_seconds": 60
+    }
+  ]
+}

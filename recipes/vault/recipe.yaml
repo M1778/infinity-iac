@@ -1,0 +1,54 @@
+{
+  "api_version": "recipe/v1",
+  "version": "1.1.0",
+  "kind": "application",
+  "supports": {
+    "providers": [
+      "oracle"
+    ],
+    "os": [
+      "ubuntu-24.04",
+      "ubuntu-22.04"
+    ],
+    "architectures": []
+  },
+  "name": "vault",
+  "description": "Secrets management.",
+  "inputs": {
+    "port": {
+      "type": "integer",
+      "description": "Loopback host port reserved for a completed deployment; this integration remains blocked.",
+      "default": 8200,
+      "min": 1,
+      "max": 65535
+    }
+  },
+  "resources": {
+    "specs": "ibase2",
+    "cpu": 2,
+    "ram_gb": 2,
+    "storage_gb": 30,
+    "ingress": [
+      {
+        "port": 8200,
+        "protocol": "tcp",
+        "source": "loopback"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "require-supported-deployment",
+      "type": "command",
+      "command": "printf '%s\\n' 'vault: deployment prerequisites are not yet implemented; inspect recipe requirements.' >&2; exit 1",
+      "timeout_seconds": 10
+    }
+  ],
+  "health": [],
+  "outputs": {},
+  "status": "template",
+  "requirements": [
+    "Implement a supported non-development Vault server with durable integrated Raft storage, TLS/listener configuration and adequate locked-memory capability.",
+    "Initialization/unseal keys and root-token custody are a separate explicit operator procedure; never auto-print credentials or substitute an insecure dev server."
+  ]
+}

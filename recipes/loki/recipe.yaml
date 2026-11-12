@@ -1,0 +1,80 @@
+{
+  "api_version": "recipe/v1",
+  "version": "1.1.0",
+  "kind": "application",
+  "supports": {
+    "providers": [
+      "oracle"
+    ],
+    "os": [
+      "ubuntu-24.04",
+      "ubuntu-22.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "name": "loki",
+  "description": "Log aggregation.",
+  "inputs": {
+    "port": {
+      "type": "integer",
+      "description": "Loopback host port; connect through an SSH tunnel or an authenticated reverse proxy.",
+      "default": 3100,
+      "min": 1,
+      "max": 65535
+    }
+  },
+  "resources": {
+    "specs": "auto",
+    "cpu": 2,
+    "ram_gb": 2,
+    "storage_gb": 30,
+    "ingress": [
+      {
+        "port": 3100,
+        "protocol": "tcp",
+        "source": "loopback"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "install-docker",
+      "type": "package",
+      "package": "docker.io"
+    },
+    {
+      "id": "write-loki-config",
+      "type": "file",
+      "destination": "/var/lib/infinity-iac/loki/config.yaml",
+      "mode": "0644",
+      "content": "auth_enabled: false\nserver:\n  http_listen_port: 3100\ncommon:\n  instance_addr: 127.0.0.1\n  path_prefix: /loki\n  storage:\n    filesystem:\n      chunks_directory: /loki/chunks\n      rules_directory: /loki/rules\n  replication_factor: 1\n  ring:\n    kvstore:\n      store: inmemory\nschema_config:\n  configs:\n    - from: 2024-01-01\n      store: tsdb\n      object_store: filesystem\n      schema: v13\n      index:\n        prefix: index_\n        period: 24h\nanalytics:\n  reporting_enabled: false\n"
+    },
+    {
+      "id": "start-loki",
+      "type": "command",
+      "command": "recipe='loki'\nowned_volume() {\n  if docker volume inspect \"$1\" >/dev/null 2>&1; then\n    owner=$(docker volume inspect -f '{{ index .Labels \"infinity-iac-recipe\" }}' \"$1\")\n    [ \"$owner\" = \"$recipe\" ] || { printf '%s\\n' 'Refusing unowned volume' >&2; exit 1; }\n  else\n    docker volume create --label \"infinity-iac-recipe=$recipe\" \"$1\" >/dev/null\n  fi\n}\nreplace_container() {\n  if docker inspect \"$1\" >/dev/null 2>&1; then\n    owner=$(docker inspect -f '{{ index .Config.Labels \"infinity-iac-recipe\" }}' \"$1\")\n    [ \"$owner\" = \"$recipe\" ] || { printf '%s\\n' 'Refusing unowned container' >&2; exit 1; }\n    docker rm -f \"$1\" >/dev/null\n  fi\n}\nowned_volume 'infinity-loki-data'\nreplace_container loki\ndocker run -d --restart unless-stopped --label infinity-iac-recipe=loki --name loki -v infinity-loki-data:/loki --user 0:0 -v /var/lib/infinity-iac/loki/config.yaml:/etc/loki/infinity.yaml:ro -p 127.0.0.1:{{port}}:3100 grafana/loki@sha256:0db216b630ae1f348a1584c67f3cead8b4c1fc839169a39501db664744158e28 -config.file=/etc/loki/infinity.yaml\n",
+      "timeout_seconds": 1200
+    }
+  ],
+  "health": [
+    {
+      "type": "http",
+      "port": 3100,
+      "path": "/ready",
+      "timeout_seconds": 240
+    }
+  ],
+  "outputs": {
+    "url": {
+      "type": "string",
+      "value": "http://127.0.0.1:{{port}}"
+    }
+  },
+  "status": "experimental",
+  "requirements": [
+    "Single-process durable filesystem-backed log store, loopback-only and unauthenticated; configure clients, retention, authorization, and backups separately."
+  ]
+}

@@ -1,0 +1,4434 @@
+{
+  "schema": "docs-catalog/v1",
+  "recipes": [
+    {
+      "name": "adguard-home",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Network-wide DNS ad blocker.",
+      "requirements": [
+        "Supply a reviewed DNS deployment with persistent /opt/adguardhome/work and /opt/adguardhome/conf, first-administrator setup, and authenticated admin readiness.",
+        "Decide which private clients may use TCP/UDP 53 and how to avoid conflicts with the host resolver; the recipe must not silently bind public DNS or grant host networking."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/adguard-home/recipe.yaml"
+    },
+    {
+      "name": "airflow",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Workflow orchestration platform.",
+      "requirements": [
+        "Use a supported Apache Airflow version with initialized persistent PostgreSQL metadata, scheduler, triggerer, web/API server and the chosen executor/worker services.",
+        "Provision Fernet/API signing keys and a real administrator, run matching database migrations, and check scheduler/executor health before accepting jobs."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/airflow/recipe.yaml"
+    },
+    {
+      "name": "alertmanager",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Prometheus alert manager.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/alertmanager/recipe.yaml"
+    },
+    {
+      "name": "appsmith",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Low-code internal tools builder.",
+      "requirements": [
+        "All-in-one evaluation deployment; complete administrator onboarding and configure datasource secrets through the SSH tunnel."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 4,
+      "storage_gb": 50,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/appsmith/recipe.yaml"
+    },
+    {
+      "name": "argocd",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Declarative GitOps delivery.",
+      "requirements": [
+        "Provide a supported existing Kubernetes cluster and least-privilege kubeconfig, then install version-pinned Argo CD namespace/CRDs/controller/server/repository services.",
+        "Persist the cluster configuration and supply administrator bootstrap handling; expose only a loopback port-forward until authenticated TLS and Git credentials are configured."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/argocd/recipe.yaml"
+    },
+    {
+      "name": "audiobookshelf",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Audiobook and podcast server.",
+      "requirements": [
+        "Complete administrator onboarding through the SSH tunnel; populate the named audiobook/podcast volumes with authorized media."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/audiobookshelf/recipe.yaml"
+    },
+    {
+      "name": "authentik",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Identity provider and SSO.",
+      "requirements": [
+        "Deploy matching Authentik server and worker images with persistent PostgreSQL and the selected version's required cache/task services; generate a stable secret key and bootstrap account.",
+        "Choose an externally valid URL, trusted proxy/TLS configuration and email settings before identity-provider use; complete migrations and authenticated readiness."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/authentik/recipe.yaml"
+    },
+    {
+      "name": "awx",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Ansible automation controller.",
+      "requirements": [
+        "Deploy a version-matched AWX Operator into a supported Kubernetes cluster with a dedicated namespace, persistent PostgreSQL and AWX custom resource.",
+        "Provide least-privilege kubeconfig, administrator secret, execution environment and trusted automation credentials; a standalone AWX container is not the supported stack."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/awx/recipe.yaml"
+    },
+    {
+      "name": "baikal",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "CalDAV and CardDAV server.",
+      "requirements": [
+        "Complete the CalDAV/CardDAV installer and administrator setup through the SSH tunnel; SQLite/configuration persist in owned volumes."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/baikal/recipe.yaml"
+    },
+    {
+      "name": "bazarr",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Subtitle management.",
+      "requirements": [
+        "Loopback-only evaluation. Complete application setup and authentication before exposing it through a TLS proxy.",
+        "Persistent named volumes start empty; configure the intended libraries, backups, or upstream services explicitly."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/bazarr/recipe.yaml"
+    },
+    {
+      "name": "bookstack",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Documentation wiki.",
+      "requirements": [
+        "Complete the private MariaDB plus BookStack stack with persistent /config, generated APP_KEY and stable APP_URL.",
+        "Change the upstream bootstrap administrator credentials, configure email/TLS and perform database and authenticated application readiness checks."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/bookstack/recipe.yaml"
+    },
+    {
+      "name": "budibase",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Low-code application platform.",
+      "requirements": [
+        "All-in-one evaluation deployment with internal services and durable /data; complete administrator onboarding before use."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 4,
+      "storage_gb": 50,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/budibase/recipe.yaml"
+    },
+    {
+      "name": "caddy",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Automatic HTTPS web server.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/caddy/recipe.yaml"
+    },
+    {
+      "name": "calcom",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Scheduling and calendar booking.",
+      "requirements": [
+        "Provide a supported Cal.com application image with persistent PostgreSQL, Prisma migrations, authentication/encryption keys and valid application/authentication URLs.",
+        "Configure the needed OAuth/calendar providers and email credentials explicitly; validate the exact image architecture and scheduled/background services."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/calcom/recipe.yaml"
+    },
+    {
+      "name": "casdoor",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Identity and access management.",
+      "requirements": [
+        "Persist a supported SQL database and Casdoor configuration/initialization data; configure driver, connection parameters, origin and bootstrap accounts for the chosen release.",
+        "Configure valid authentication callback domains, trusted OAuth/SAML providers and TLS; the stock image alone does not define an identity deployment."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/casdoor/recipe.yaml"
+    },
+    {
+      "name": "cassandra",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Distributed wide-column database.",
+      "requirements": [
+        "Single-node CQL evaluation with loopback-only unauthenticated access. Configure authentication, replication and backups before attaching untrusted clients."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 4,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/cassandra/recipe.yaml"
+    },
+    {
+      "name": "changedetection",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Website change monitoring.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/changedetection/recipe.yaml"
+    },
+    {
+      "name": "chatwoot",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Customer support and live chat.",
+      "requirements": [
+        "Run compatible Rails web and Sidekiq worker images with persistent PostgreSQL/pgvector, Redis and uploads; perform the matching database preparation.",
+        "Generate SECRET_KEY_BASE and configure a valid frontend URL, SMTP and approved messaging-provider credentials; verify worker and authenticated web readiness."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/chatwoot/recipe.yaml"
+    },
+    {
+      "name": "clickhouse",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Analytical columnar database.",
+      "requirements": [
+        "Authenticated single-node HTTP SQL endpoint; native port 9000 is not mapped. Credentials remain in a mode-0600 file on the instance."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 3,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/clickhouse/recipe.yaml"
+    },
+    {
+      "name": "cloud-init-report",
+      "version": "1.0.0",
+      "kind": "script",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Inspect current cloud-init status and recent bootstrap errors without rerunning initialization.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 1,
+      "ram_gb": 1,
+      "storage_gb": 30,
+      "inputs": [],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/cloud-init-report/recipe.yaml"
+    },
+    {
+      "name": "cockroachdb",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Distributed SQL database.",
+      "requirements": [
+        "Explicitly insecure single-node UI evaluation: SQL is container-local and not mapped. This is not a secure production database cluster."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 3,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/cockroachdb/recipe.yaml"
+    },
+    {
+      "name": "code-server",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Browser-based VS Code.",
+      "requirements": [
+        "Login with the generated password from the private credentials.env. No host Docker socket is mounted; workspaces remain in the owned config volume."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/code-server/recipe.yaml"
+    },
+    {
+      "name": "coder",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Cloud development environments.",
+      "requirements": [
+        "Control-plane evaluation with private PostgreSQL and explicit listener/access URL; complete first-administrator onboarding.",
+        "Workspace templates/provisioners and their credentials are not bundled; no privileged Docker socket is mounted."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 3,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/coder/recipe.yaml"
+    },
+    {
+      "name": "consul",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Service discovery and configuration.",
+      "requirements": [
+        "Single-node evaluation, not dev mode, with durable Raft data. No gossip/DNS ports or host socket are mapped; configure ACLs/TLS before attaching clients."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/consul/recipe.yaml"
+    },
+    {
+      "name": "couchdb",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Document database.",
+      "requirements": [
+        "Authenticated single-node CouchDB; bootstrap credentials are stored on the instance with mode 0600."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/couchdb/recipe.yaml"
+    },
+    {
+      "name": "dashy",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Self-hosted start page.",
+      "requirements": [
+        "Configure dashboard links and access control in the persistent user-data volume; this empty local dashboard is not an authenticated public portal."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/dashy/recipe.yaml"
+    },
+    {
+      "name": "dendrite",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Matrix homeserver.",
+      "requirements": [
+        "Select a maintained supported Dendrite image/release and configure persistent database, media and the required event broker for that version.",
+        "Supply immutable Matrix server name and signing keys, valid TLS/federation/proxy settings and explicit account registration/admin policy; do not substitute an empty monolith container."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/dendrite/recipe.yaml"
+    },
+    {
+      "name": "directus",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Headless data platform.",
+      "requirements": [
+        "Standalone SQLite and persisted uploads/extensions; login using the privately generated administrator password.",
+        "Configure a public URL, database backups, trusted extensions, email and TLS before external use."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/directus/recipe.yaml"
+    },
+    {
+      "name": "discourse",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Community discussion platform.",
+      "requirements": [
+        "Build a supported official Discourse application image/container bundle with persistent PostgreSQL, Redis, uploads and background jobs; retire the unavailable Bitnami latest reference.",
+        "Provide a real hostname, SMTP credentials, bootstrap administrator and TLS; run matching setup/migrations and verify email/background services."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/discourse/recipe.yaml"
+    },
+    {
+      "name": "disk-report",
+      "version": "1.0.0",
+      "kind": "script",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Read-only block-device and filesystem capacity diagnostics.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 1,
+      "ram_gb": 1,
+      "storage_gb": 30,
+      "inputs": [],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/disk-report/recipe.yaml"
+    },
+    {
+      "name": "docker-report",
+      "version": "1.0.0",
+      "kind": "script",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Read-only Docker engine, container, and storage diagnostics; never prunes resources.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 1,
+      "ram_gb": 1,
+      "storage_gb": 30,
+      "inputs": [],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/docker-report/recipe.yaml"
+    },
+    {
+      "name": "docspell",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Document organizer.",
+      "requirements": [
+        "Deploy matching Docspell restserver and joex worker services with persistent PostgreSQL, document storage and the supported search backend/configuration.",
+        "Configure shared authentication/secrets and URLs, initialize storage and verify both job processing and REST readiness; no supported single docspellapp/docspell container is assumed."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/docspell/recipe.yaml"
+    },
+    {
+      "name": "dokuwiki",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Wiki engine.",
+      "requirements": [
+        "Loopback-only evaluation. Complete application setup and authentication before exposing it through a TLS proxy.",
+        "Persistent named volumes start empty; configure the intended libraries, backups, or upstream services explicitly."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/dokuwiki/recipe.yaml"
+    },
+    {
+      "name": "dolibarr",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "ERP and CRM suite.",
+      "requirements": [
+        "ERP demo with generated administrator/database credentials stored privately. Configure organization settings, email, TLS and backups before use."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 3,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/dolibarr/recipe.yaml"
+    },
+    {
+      "name": "drone",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Continuous integration server.",
+      "requirements": [
+        "Configure a supported Drone server plus a separately authorized runner, database and persistent application data.",
+        "Provide Git-provider OAuth credentials, shared runner RPC secret and valid server URL/TLS; runners require a deliberately chosen isolated executor, not an implicit host Docker socket."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/drone/recipe.yaml"
+    },
+    {
+      "name": "drupal",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Open-source CMS.",
+      "requirements": [
+        "The Drupal installer is ready with a private PostgreSQL service named infinity-drupal-db. Enter the generated DB credentials from credentials.env in the installer.",
+        "Choose PostgreSQL in the installer, complete administrator onboarding and configure public hostname/TLS separately."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 3,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/drupal/recipe.yaml"
+    },
+    {
+      "name": "duplicati",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Encrypted backup manager.",
+      "requirements": [
+        "UI password and settings encryption key are generated into the private credentials.env; configure authorized backup sources and an independent destination.",
+        "No host paths are mounted; the owned source and backup volumes start empty. VM deletion destroys both."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/duplicati/recipe.yaml"
+    },
+    {
+      "name": "emby",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Media server.",
+      "requirements": [
+        "Loopback-only evaluation. Complete application setup and authentication before exposing it through a TLS proxy.",
+        "Persistent named volumes start empty; configure the intended libraries, backups, or upstream services explicitly."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/emby/recipe.yaml"
+    },
+    {
+      "name": "erpnext",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Business management suite.",
+      "requirements": [
+        "Use the supported Frappe/ERPNext deployment bundle with version-matched backend/frontend, workers, scheduler, websocket services, MariaDB and Redis services.",
+        "Create and migrate an actual Frappe site with private administrator/database credentials, persistent sites/assets and a stable domain; verify all worker queues and frontend."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/erpnext/recipe.yaml"
+    },
+    {
+      "name": "espocrm",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "CRM platform.",
+      "requirements": [
+        "Deploy persistent EspoCRM with a supported MariaDB/MySQL database, matching daemon/background processing, configured site URL and bootstrap administrator.",
+        "Run the documented initialization/migrations and configure email/TLS; verify scheduled jobs and authenticated application readiness."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/espocrm/recipe.yaml"
+    },
+    {
+      "name": "etcd",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Distributed key-value store.",
+      "requirements": [
+        "Single-node durable evaluation store. Only loopback client HTTP is mapped; configure authenticated TLS and cluster recovery before broader use."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/etcd/recipe.yaml"
+    },
+    {
+      "name": "excalidraw",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Collaborative whiteboard.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/excalidraw/recipe.yaml"
+    },
+    {
+      "name": "filebrowser",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Web file manager.",
+      "requirements": [
+        "FileBrowser initializes a random administrator password on first boot; retrieve it privately from the owned container logs and rotate it.",
+        "Only owned named volumes are served; no host filesystem or Docker socket is exposed."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/filebrowser/recipe.yaml"
+    },
+    {
+      "name": "firefly-iii",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Personal finance manager.",
+      "requirements": [
+        "Complete persistent private MariaDB plus Firefly III uploads, stable APP_KEY/APP_URL and initial user setup.",
+        "Configure the documented scheduled cron token/service, email, backups and TLS before recording financial data; verify migrations and authenticated readiness."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/firefly-iii/recipe.yaml"
+    },
+    {
+      "name": "forgejo",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Federated Git service.",
+      "requirements": [
+        "Complete administrator onboarding through the SSH tunnel. Git-over-SSH is not mapped; this demo supports HTTP Git through the tunnel only."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/forgejo/recipe.yaml"
+    },
+    {
+      "name": "freshrss",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "RSS feed reader.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/freshrss/recipe.yaml"
+    },
+    {
+      "name": "ghost",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Publishing platform.",
+      "requirements": [
+        "Complete initial administrator setup through localhost SSH forwarding; isolated MySQL 8.4, Ghost content and credentials persist. Configure email, the public URL and HTTPS before publication."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 3,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/ghost/recipe.yaml"
+    },
+    {
+      "name": "gitea",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Lightweight Git hosting.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/gitea/recipe.yaml"
+    },
+    {
+      "name": "gitlab",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "DevOps lifecycle platform.",
+      "requirements": [
+        "Choose a version-pinned supported GitLab Omnibus image and sufficient CPU/RAM/storage; persist /etc/gitlab, /var/log/gitlab and /var/opt/gitlab.",
+        "Set a stable external_url and ports, protect/rotate the initial administrator credential and configure email/TLS; verify all internal services before declaring readiness."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/gitlab/recipe.yaml"
+    },
+    {
+      "name": "grafana",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Metrics dashboards.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/grafana/recipe.yaml"
+    },
+    {
+      "name": "graylog",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Centralized log management.",
+      "requirements": [
+        "Deploy compatible Graylog, MongoDB and the version-supported Data Node/OpenSearch search backend with persistent journals and search/database data.",
+        "Generate password secret/admin hash, configure host kernel limits and collector inputs deliberately, and verify search/ingest and authenticated UI readiness."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/graylog/recipe.yaml"
+    },
+    {
+      "name": "guacamole",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Remote desktop gateway.",
+      "requirements": [
+        "Provide matching Guacamole web and guacd services plus initialized persistent PostgreSQL/MySQL with the upstream schema loaded.",
+        "Configure private database credentials, replace bootstrap administrator credentials, allow only approved remote targets and verify the web and guacd paths; no host network is implicit."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/guacamole/recipe.yaml"
+    },
+    {
+      "name": "homeassistant",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Home automation platform.",
+      "requirements": [
+        "Isolated bridge-network UI demo. Complete onboarding; host-network discovery, hardware devices and USB/Bluetooth capabilities are intentionally not granted."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/homeassistant/recipe.yaml"
+    },
+    {
+      "name": "immich",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Photo and video backup.",
+      "requirements": [
+        "Use the version-matched supported Immich stack with PostgreSQL vector extensions, cache service, server and machine-learning service; persist uploads and database data.",
+        "Configure administrator onboarding, storage permissions and background jobs; GPU acceleration requires explicit compatible hardware and runtime."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/immich/recipe.yaml"
+    },
+    {
+      "name": "influxdb",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Time-series database.",
+      "requirements": [
+        "Bootstrap username, password and token are persisted in the owner-only credentials.env file; do not publish that file."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/influxdb/recipe.yaml"
+    },
+    {
+      "name": "jellyfin",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Free media system.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/jellyfin/recipe.yaml"
+    },
+    {
+      "name": "jenkins",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Automation server.",
+      "requirements": [
+        "Unlock Jenkins using the owner-only initialAdminPassword in /var/jenkins_home/secrets inside the owned container.",
+        "No host Docker socket or agent port is exposed; install trusted plugins and configure agents separately."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 3,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/jenkins/recipe.yaml"
+    },
+    {
+      "name": "jitsi",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Video conferencing.",
+      "requirements": [
+        "Deploy matching Jitsi web, Prosody, Jicofo and JVB components with persistent configuration and shared authentication secrets.",
+        "Provide real public URL/TLS and explicitly reviewed UDP/media/NAT mappings or TURN configuration; a web-only HTTP container cannot certify meetings."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/jitsi/recipe.yaml"
+    },
+    {
+      "name": "joomla",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Content management system.",
+      "requirements": [
+        "Isolated MariaDB-backed installer with persistent site files; complete administrator onboarding and TLS setup through the SSH tunnel."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 3,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/joomla/recipe.yaml"
+    },
+    {
+      "name": "jupyter",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Interactive notebooks.",
+      "requirements": [
+        "Token-authenticated scientific notebook; credentials stay in the mode-0600 file and notebooks persist in the owned work volume.",
+        "No GPUs, host mounts or remote kernels are configured. Execute only trusted notebooks."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/jupyter/recipe.yaml"
+    },
+    {
+      "name": "kafka",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Event streaming platform.",
+      "requirements": [
+        "Single-node KRaft plaintext evaluation, loopback-only; clients use localhost SSH forwarding matching the selected host port.",
+        "Configure TLS/SASL, replication and recovery before production; internal broker/controller listeners are not mapped."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 3,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/kafka/recipe.yaml"
+    },
+    {
+      "name": "kanboard",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Kanban project management.",
+      "requirements": [
+        "SQLite evaluation deployment starts with upstream administrator credentials; change them immediately through the SSH tunnel."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/kanboard/recipe.yaml"
+    },
+    {
+      "name": "keycloak",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Identity and access management.",
+      "requirements": [
+        "Explicit development-mode HTTP evaluation with persistent PostgreSQL. Replace the temporary bootstrap administrator and use start with trusted hostname/TLS for production."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 3,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/keycloak/recipe.yaml"
+    },
+    {
+      "name": "kibana",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Elastic observability UI.",
+      "requirements": [
+        "Provide a version-matched supported Elasticsearch cluster and persistent Kibana configuration with a service-account token, CA trust and stable encryption keys.",
+        "Perform authenticated cluster and UI readiness; never start a disconnected Kibana frontend or expose untrusted Elasticsearch credentials."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/kibana/recipe.yaml"
+    },
+    {
+      "name": "komga",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Comics and manga server.",
+      "requirements": [
+        "Create the first administrator and add authorized media under /data through the SSH tunnel."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 3,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/komga/recipe.yaml"
+    },
+    {
+      "name": "kopia",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Encrypted backup system.",
+      "requirements": [
+        "Encrypted filesystem repository and authenticated local HTTP UI; credentials live privately on the instance.",
+        "Add authorized snapshot sources and an independent backup destination. Deleting the VM destroys the local repository."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/kopia/recipe.yaml"
+    },
+    {
+      "name": "kuma",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Uptime monitoring.",
+      "requirements": [
+        "This planned entry duplicates uptime-kuma. Use the canonical uptime-kuma recipe for its owned persistent deployment and administrator onboarding.",
+        "A separate Kuma service-mesh integration would require a distinct name and a supported control-plane/data-plane deployment; no duplicate container is launched."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/kuma/recipe.yaml"
+    },
+    {
+      "name": "loki",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Log aggregation.",
+      "requirements": [
+        "Single-process durable filesystem-backed log store, loopback-only and unauthenticated; configure clients, retention, authorization, and backups separately."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/loki/recipe.yaml"
+    },
+    {
+      "name": "mariadb",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "MariaDB relational database.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/mariadb/recipe.yaml"
+    },
+    {
+      "name": "mastodon",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Federated social network.",
+      "requirements": [
+        "Deploy matching Mastodon web, streaming and Sidekiq services with PostgreSQL, Redis, persistent media and generated secrets.",
+        "Provide real federation domain/TLS, SMTP, administrator onboarding and job/search configuration; verify all components, not only the web process."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/mastodon/recipe.yaml"
+    },
+    {
+      "name": "matrix-synapse",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Matrix messaging homeserver.",
+      "requirements": [
+        "Complete a maintained Synapse homeserver with immutable server name/signing key, persistent PostgreSQL/media, explicit registration policy and administrator handling.",
+        "Choose either an explicitly localhost-only evaluation or a valid TLS/reverse-proxy/federation deployment; verify client, database and media readiness."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/matrix-synapse/recipe.yaml"
+    },
+    {
+      "name": "mattermost",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Team collaboration messaging.",
+      "requirements": [
+        "Complete first-user/team onboarding. Private PostgreSQL and all stateful Mattermost paths persist; configure TLS/email and disable unintended public signups before publication."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64"
+      ],
+      "cpu": 2,
+      "ram_gb": 4,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/mattermost/recipe.yaml"
+    },
+    {
+      "name": "meilisearch",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Fast search engine.",
+      "requirements": [
+        "API calls require the generated master key in the private credentials.env. Configure scoped API keys before sharing access."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/meilisearch/recipe.yaml"
+    },
+    {
+      "name": "metabase",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Business intelligence dashboards.",
+      "requirements": [
+        "Embedded H2 storage is for evaluation; migrate to a backed-up production application database before serious use.",
+        "Complete initial administrator onboarding through the SSH tunnel."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 3,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/metabase/recipe.yaml"
+    },
+    {
+      "name": "minio",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "S3-compatible object storage.",
+      "requirements": [
+        "Provide a presently supported licensed/maintained MinIO-compatible server image or reviewed source build; the legacy public minio/minio:latest availability is not assumed.",
+        "Initialize durable object storage, strong administrator credentials, S3 and console listeners, TLS and authenticated object persistence tests."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/minio/recipe.yaml"
+    },
+    {
+      "name": "mongodb",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Document database.",
+      "requirements": [
+        "Authenticated standalone MongoDB; configure replication and backups separately.",
+        "Connect using credentials from the instance-local owner-only credentials.env."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/mongodb/recipe.yaml"
+    },
+    {
+      "name": "moodle",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Learning management system.",
+      "requirements": [
+        "Build or supply a maintained supported Moodle application image matching its PHP/extensions, persistent Moodle data, database and scheduled cron.",
+        "Replace the unavailable Bitnami latest dependency, configure site URL/admin credentials/email/TLS, run installer/migrations and verify background tasks."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/moodle/recipe.yaml"
+    },
+    {
+      "name": "mysql",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "MySQL relational database.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/mysql/recipe.yaml"
+    },
+    {
+      "name": "n8n",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Self-hosted n8n workflow automation service.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-latest",
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 35,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/n8n/recipe.yaml"
+    },
+    {
+      "name": "nats",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Cloud-native messaging.",
+      "requirements": [
+        "JetStream persistence is enabled. Only monitoring is mapped to loopback; port 4222 is not exposed.",
+        "Configure authenticated NATS users and a deliberate client listener before attaching clients."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/nats/recipe.yaml"
+    },
+    {
+      "name": "netdata",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Infrastructure monitoring.",
+      "requirements": [
+        "Unprivileged isolated-container diagnostics, not full host monitoring; no host /proc, /sys, device or Docker socket mounts are granted.",
+        "Cloud enrollment and host collectors require a deliberate separate configuration."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/netdata/recipe.yaml"
+    },
+    {
+      "name": "network-report",
+      "version": "1.0.0",
+      "kind": "script",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Read-only interface, route, resolver, and listening port diagnostics.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 1,
+      "ram_gb": 1,
+      "storage_gb": 30,
+      "inputs": [],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/network-report/recipe.yaml"
+    },
+    {
+      "name": "nextcloud",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "File sync and collaboration.",
+      "requirements": [
+        "Complete Nextcloud plus MariaDB; generated administrator credentials are stored privately on the instance.",
+        "SSH tunnel hostname must be localhost/127.0.0.1. Configure cron, trusted public domain, Redis locking, TLS and backups before public use."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 4,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/nextcloud/recipe.yaml"
+    },
+    {
+      "name": "nginx",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "High-performance web server.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/nginx/recipe.yaml"
+    },
+    {
+      "name": "nocodb",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Airtable alternative.",
+      "requirements": [
+        "Standalone SQLite evaluation; complete initial administrator onboarding. Configure external databases and backups before production."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/nocodb/recipe.yaml"
+    },
+    {
+      "name": "node-red",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Flow-based programming.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/node-red/recipe.yaml"
+    },
+    {
+      "name": "oc-hunter",
+      "version": "1.0.0",
+      "kind": "script",
+      "status": "experimental",
+      "execution": "local",
+      "description": "Bounded local OCI capacity helper that creates one exact managed instance without copying credentials into a guest.",
+      "requirements": [
+        "A validated named OCI compute profile with an explicit compatible image, subnet, and SSH public key.",
+        "VM.Standard.A1.Flex or VM.Standard.E2.1.Micro eligibility and cost must be checked in your tenancy; no free-tier guarantee is implied.",
+        "Keep the private operation journal after interruptions; uncertain launches are not automatically repeated."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "linux",
+        "darwin"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 0,
+      "ram_gb": 0,
+      "storage_gb": 0,
+      "inputs": [
+        {
+          "name": "access",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "attempts",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "name": "availability_domains",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "cpu",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "name": "dry_run",
+          "type": "boolean",
+          "required": false
+        },
+        {
+          "name": "interval_seconds",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "output",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "ram_gb",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "name": "shape",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "state_file",
+          "type": "string",
+          "required": false
+        },
+        {
+          "name": "storage_gb",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "name": "timeout_seconds",
+          "type": "integer",
+          "required": false
+        },
+        {
+          "name": "yes",
+          "type": "boolean",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/oc-hunter/recipe.yaml"
+    },
+    {
+      "name": "ollama",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Local language model runner.",
+      "requirements": [
+        "CPU-only daemon with no downloaded model. Pull an appropriately sized model explicitly; model execution is not a readiness check.",
+        "The unauthenticated API is loopback-only. GPU use requires compatible hardware/runtime not supplied by this recipe."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 4,
+      "storage_gb": 60,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/ollama/recipe.yaml"
+    },
+    {
+      "name": "open-webui",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "AI chat web interface.",
+      "requirements": [
+        "Create the first administrator through the SSH tunnel. No model backend is bundled; configure a trusted authenticated inference endpoint in settings."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 4,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/open-webui/recipe.yaml"
+    },
+    {
+      "name": "opencost",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Cloud cost monitoring.",
+      "requirements": [
+        "Provide a supported Kubernetes cluster and least-privilege kubeconfig, Prometheus metrics endpoint, matching OpenCost deployment and cluster identity.",
+        "Configure cloud pricing/integration inputs and UI/API forwarding deliberately; validate real metrics ingestion rather than a disconnected container."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/opencost/recipe.yaml"
+    },
+    {
+      "name": "opensearch",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Open-source search engine.",
+      "requirements": [
+        "Complete version-pinned single-node or cluster configuration with persistent data, strong bootstrap password, reviewed host vm.max_map_count and resource limits.",
+        "Replace demo certificates/users for production and implement authenticated TLS/cluster readiness; never disable security to obtain a green liveness check."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/opensearch/recipe.yaml"
+    },
+    {
+      "name": "outline",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Team knowledge base.",
+      "requirements": [
+        "Deploy supported Outline with persistent PostgreSQL, Redis, object/file storage, secret keys and a valid URL.",
+        "Provide a supported OAuth/OIDC/SSO provider and required email credentials, TLS and migration/worker/readiness handling; anonymous startup is not a complete wiki."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/outline/recipe.yaml"
+    },
+    {
+      "name": "owncloud",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "File sync and sharing.",
+      "requirements": [
+        "Persistent ownCloud plus private MariaDB with generated administrator credentials; connect through localhost SSH forwarding.",
+        "Configure Redis locking, background jobs, trusted public hostname, TLS and backups before public use."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64"
+      ],
+      "cpu": 2,
+      "ram_gb": 4,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/owncloud/recipe.yaml"
+    },
+    {
+      "name": "paperless-ngx",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Document management.",
+      "requirements": [
+        "Run version-compatible Paperless-ngx with persistent database, supported cache/broker and durable data/media/consume/export paths; bootstrap a real administrator.",
+        "Implement job/consumer readiness, permissions and secrets; add supported Tika/Gotenberg only when required and keep document processing isolated."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/paperless-ngx/recipe.yaml"
+    },
+    {
+      "name": "peertube",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Federated video platform.",
+      "requirements": [
+        "Deploy matching PeerTube, PostgreSQL and Redis with persistent media/configuration, generated secrets and initialized application data.",
+        "Provide federation hostname, SMTP, TLS and deliberately configured storage/transcoding resource limits; verify upload, worker and playback paths."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/peertube/recipe.yaml"
+    },
+    {
+      "name": "penpot",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Collaborative design tool.",
+      "requirements": [
+        "Deploy matching Penpot frontend/backend/exporter with persistent PostgreSQL and cache plus configured secrets, flags and application URI.",
+        "Map the actual frontend port 8080, configure authentication/TLS/email and verify backend/exporter readiness; a frontend-only container is incomplete."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/penpot/recipe.yaml"
+    },
+    {
+      "name": "pgadmin",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "PostgreSQL administration.",
+      "requirements": [
+        "Login with the generated owner-only bootstrap credentials, then register a separately managed PostgreSQL server. No database credentials are embedded."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/pgadmin/recipe.yaml"
+    },
+    {
+      "name": "phpmyadmin",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "MySQL administration.",
+      "requirements": [
+        "Provide an explicitly selected managed MySQL/MariaDB target and an isolated phpMyAdmin deployment with private host/port/authentication settings.",
+        "Use authenticated database and HTTP readiness with stable blowfish/session secret; never allow arbitrary remote database destinations by default."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/phpmyadmin/recipe.yaml"
+    },
+    {
+      "name": "pihole",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "DNS sinkhole.",
+      "requirements": [
+        "Persist /etc/pihole and version-compatible configuration with generated web administrator password and explicitly chosen private DNS clients/upstreams.",
+        "Review TCP/UDP 53 conflicts and capabilities before DNS service; do not implicitly enable public DNS, DHCP, host networking or network-admin privileges."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/pihole/recipe.yaml"
+    },
+    {
+      "name": "plex",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Media server.",
+      "requirements": [
+        "Supply and authorize media explicitly. Account claiming and remote discovery are not configured; no privileged device access or public streaming port is granted."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/plex/recipe.yaml"
+    },
+    {
+      "name": "postgres",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "PostgreSQL relational database.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/postgres/recipe.yaml"
+    },
+    {
+      "name": "prefect",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Workflow orchestration.",
+      "requirements": [
+        "Standalone evaluation server using durable SQLite. Configure authenticated access, workers, and production database separately."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/prefect/recipe.yaml"
+    },
+    {
+      "name": "prometheus",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Metrics collection and alerting.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/prometheus/recipe.yaml"
+    },
+    {
+      "name": "qdrant",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Vector similarity database.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/qdrant/recipe.yaml"
+    },
+    {
+      "name": "rabbitmq",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Message broker with management UI.",
+      "requirements": [
+        "Only the management UI is mapped to loopback. Configure a separate deliberate AMQP mapping for clients.",
+        "Bootstrap credentials are persisted privately on the instance."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/rabbitmq/recipe.yaml"
+    },
+    {
+      "name": "rancher",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Kubernetes management.",
+      "requirements": [
+        "Provide a supported Kubernetes cluster and version-matched Rancher/Helm deployment, persistent state, bootstrap credentials and valid hostname/TLS.",
+        "Cluster administration capabilities and credential access require deliberate authorization; an implicitly privileged all-in-one Docker container is not supplied."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/rancher/recipe.yaml"
+    },
+    {
+      "name": "redis",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "In-memory data store.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/redis/recipe.yaml"
+    },
+    {
+      "name": "redmine",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Project management.",
+      "requirements": [
+        "Change the upstream administrator password immediately through the SSH tunnel; the database and uploaded files have separate persistent volumes."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 3,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/redmine/recipe.yaml"
+    },
+    {
+      "name": "registry",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "OCI container registry.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/registry/recipe.yaml"
+    },
+    {
+      "name": "restic-rest-server",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Restic backup service.",
+      "requirements": [
+        "Provide a maintained rest-server version with durable repository storage, explicit htpasswd users and append-only policy where appropriate.",
+        "Configure authenticated TLS or loopback proxy, authorized clients and independent restore tests; a process-running check does not prove a backup."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/restic-rest-server/recipe.yaml"
+    },
+    {
+      "name": "rocket-chat",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Team chat platform.",
+      "requirements": [
+        "Deploy compatible Rocket.Chat with persistent MongoDB replica set/oplog configured and initialized for the chosen release.",
+        "Set a valid ROOT_URL, generated secrets/administrator, storage/email/integration settings and authenticated database/app readiness; verify selected image architecture."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/rocket-chat/recipe.yaml"
+    },
+    {
+      "name": "rundeck",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Runbook automation.",
+      "requirements": [
+        "Deploy supported Rundeck with a durable application database and persistent project/plugin/data paths; configure URL, login credentials and encryption settings.",
+        "Provide only approved job-runner credentials/targets, configure TLS and verify scheduler plus authenticated API readiness."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/rundeck/recipe.yaml"
+    },
+    {
+      "name": "seafile",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "File hosting and collaboration.",
+      "requirements": [
+        "Use the version-supported Seafile stack with persistent database, required cache and durable data/configuration; initialize administrator and site URL.",
+        "Provide TLS/proxy and background/file-service readiness, respecting release-specific object-storage/cache configuration and image architectures."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/seafile/recipe.yaml"
+    },
+    {
+      "name": "searxng",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Privacy-respecting metasearch.",
+      "requirements": [
+        "Configure permitted search engines, rate limits and proxy trust before external access. This local search frontend does not configure an authenticated publication layer."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/searxng/recipe.yaml"
+    },
+    {
+      "name": "sonarqube",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Code quality platform.",
+      "requirements": [
+        "Complete matching SonarQube plus persistent PostgreSQL with data/extensions/logs and verified vm.max_map_count, open-file/process limits and adequate memory.",
+        "Change the bootstrap administrator, verify search engine and application status, and configure TLS before accepting source code."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/sonarqube/recipe.yaml"
+    },
+    {
+      "name": "speedtest",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Self-hosted speed test.",
+      "requirements": [
+        "Measures the tunnel-to-instance path; it is not a general bandwidth certification. Publishing the test requires deliberate ingress and resource limits."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/speedtest/recipe.yaml"
+    },
+    {
+      "name": "stirling-pdf",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "PDF toolkit.",
+      "requirements": [
+        "Loopback-only evaluation. Complete application setup and authentication before exposing it through a TLS proxy.",
+        "Persistent named volumes start empty; configure the intended libraries, backups, or upstream services explicitly."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 3,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/stirling-pdf/recipe.yaml"
+    },
+    {
+      "name": "strapi",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Headless CMS.",
+      "requirements": [
+        "Build or supply a reviewed supported Strapi application image containing the actual project, dependencies and matching Node version; the old strapi/strapi image is legacy v3.",
+        "Configure persistent database/uploads, application JWT/encryption secrets, administrator bootstrap, migrations and health endpoint for that project."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/strapi/recipe.yaml"
+    },
+    {
+      "name": "superset",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Data exploration platform.",
+      "requirements": [
+        "Deploy a supported Superset image with persistent metadata PostgreSQL, SECRET_KEY, initialized schema/administrator and the selected worker/cache/scheduler services.",
+        "Configure drivers/datasource credentials and async job policy explicitly; verify authenticated web and worker readiness before analysis."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/superset/recipe.yaml"
+    },
+    {
+      "name": "syncthing",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Continuous file synchronization.",
+      "requirements": [
+        "Only the GUI is mapped to loopback. Configure a GUI password and authenticated peer devices before use.",
+        "Synchronizing with remote peers requires deliberately configured ports 22000/TCP/UDP and 21027/UDP; this demo does not open them."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/syncthing/recipe.yaml"
+    },
+    {
+      "name": "system-report",
+      "version": "1.0.0",
+      "kind": "script",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Read-only operating-system, CPU, memory, filesystem, and socket diagnostics.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 1,
+      "ram_gb": 1,
+      "storage_gb": 30,
+      "inputs": [],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/system-report/recipe.yaml"
+    },
+    {
+      "name": "taiga",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Agile project management.",
+      "requirements": [
+        "Deploy matching Taiga frontend/backend/async/event services with PostgreSQL, broker, media storage, shared secrets and configuration.",
+        "Provide stable frontend/backend URLs, email/admin initialization and proxy/TLS; a frontend-only Docker mapping does not implement project management."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/taiga/recipe.yaml"
+    },
+    {
+      "name": "temporal",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Durable workflow engine.",
+      "requirements": [
+        "Provide the version-supported persistent PostgreSQL/MySQL schema setup, Temporal server and UI with consistent namespace/authentication configuration.",
+        "Persist server data and configure client/worker endpoints explicitly; verify a workflow round-trip instead of only UI process liveness."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/temporal/recipe.yaml"
+    },
+    {
+      "name": "traccar",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "GPS tracking platform.",
+      "requirements": [
+        "Complete first-account onboarding. Device listener ports are intentionally not mapped; configure authenticated device ingress separately."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 3,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/traccar/recipe.yaml"
+    },
+    {
+      "name": "traefik",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Cloud-native reverse proxy.",
+      "requirements": [
+        "Explicit local dashboard evaluation with a file provider and no host Docker socket. Configure routes/TLS/authentication in the persistent /data volume before serving applications."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/traefik/recipe.yaml"
+    },
+    {
+      "name": "umami",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Privacy-focused analytics.",
+      "requirements": [
+        "Persisted PostgreSQL analytics application; change the upstream starter administrator password immediately through the SSH tunnel.",
+        "Configure authorized tracked sites, privacy settings and TLS before collecting real visitor data."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 3,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/umami/recipe.yaml"
+    },
+    {
+      "name": "uptime-kuma",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Self-hosted uptime monitor.",
+      "requirements": [],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/uptime-kuma/recipe.yaml"
+    },
+    {
+      "name": "vault",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Secrets management.",
+      "requirements": [
+        "Implement a supported non-development Vault server with durable integrated Raft storage, TLS/listener configuration and adequate locked-memory capability.",
+        "Initialization/unseal keys and root-token custody are a separate explicit operator procedure; never auto-print credentials or substitute an insecure dev server."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/vault/recipe.yaml"
+    },
+    {
+      "name": "vaultwarden",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Bitwarden-compatible password manager.",
+      "requirements": [
+        "Create the first vault account over an SSH tunnel, then disable signups in persistent configuration.",
+        "The admin endpoint is disabled; configure TLS and a separate admin token before external publication."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/vaultwarden/recipe.yaml"
+    },
+    {
+      "name": "vikunja",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Task management application.",
+      "requirements": [
+        "Register the first user through the SSH tunnel; configure public URL, authentication policy and email before public use."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/vikunja/recipe.yaml"
+    },
+    {
+      "name": "vllm",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "High-throughput LLM serving.",
+      "requirements": [
+        "Provide a supported GPU VM, compatible drivers/NVIDIA container runtime, sufficient VRAM/RAM/storage and a version/platform-matched vLLM image.",
+        "Choose an authorized model/token, supply API authentication and loopback listener settings, then verify an actual inference response; default 2-GB CPU VMs cannot run this workload."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/vllm/recipe.yaml"
+    },
+    {
+      "name": "wallabag",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Read-it-later application.",
+      "requirements": [
+        "Database and captured images persist privately; change upstream starter login credentials immediately through the SSH tunnel. Configure public URL/TLS/email before publication."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64"
+      ],
+      "cpu": 2,
+      "ram_gb": 3,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/wallabag/recipe.yaml"
+    },
+    {
+      "name": "weaviate",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Vector database.",
+      "requirements": [
+        "Complete a version-pinned persistent single-node or cluster deployment with explicit authentication/authorization and supported vectorizer configuration.",
+        "Provide required model/API credentials only for chosen modules and validate object/vector operations and storage persistence; no external model backend is assumed."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/weaviate/recipe.yaml"
+    },
+    {
+      "name": "woodpecker",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Continuous integration server.",
+      "requirements": [
+        "Deploy matching Woodpecker server and a separately authorized agent with durable database/configuration, shared agent secret and valid server URL.",
+        "Provide forge OAuth credentials and deliberately choose an isolated execution backend; do not mount the host Docker socket by default."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/woodpecker/recipe.yaml"
+    },
+    {
+      "name": "wordpress",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "experimental",
+      "execution": "instance",
+      "description": "Publishing and CMS platform.",
+      "requirements": [
+        "Persistent isolated MariaDB and WordPress; complete the site installer over the SSH tunnel and configure HTTPS before publication."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [
+        "amd64",
+        "arm64"
+      ],
+      "cpu": 2,
+      "ram_gb": 3,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/wordpress/recipe.yaml"
+    },
+    {
+      "name": "xwiki",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Enterprise wiki.",
+      "requirements": [
+        "Deploy supported XWiki with initialized persistent PostgreSQL/MySQL and durable /usr/local/xwiki data/configuration, matching JDBC settings and application version.",
+        "Complete the distribution wizard and administrator registration, configure email/TLS and validate authenticated database/application readiness."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/xwiki/recipe.yaml"
+    },
+    {
+      "name": "zabbix",
+      "version": "1.1.0",
+      "kind": "application",
+      "status": "template",
+      "execution": "instance",
+      "description": "Infrastructure monitoring.",
+      "requirements": [
+        "Run version-matched Zabbix server, frontend and initialized persistent MySQL/PostgreSQL schema with private database credentials and durable server data.",
+        "Configure monitored agent/proxy access deliberately and rotate bootstrap administrator credentials; verify both monitoring server and authenticated frontend readiness."
+      ],
+      "providers": [
+        "oracle"
+      ],
+      "os": [
+        "ubuntu-24.04",
+        "ubuntu-22.04"
+      ],
+      "architectures": [],
+      "cpu": 2,
+      "ram_gb": 2,
+      "storage_gb": 30,
+      "inputs": [
+        {
+          "name": "port",
+          "type": "integer",
+          "required": false
+        }
+      ],
+      "source": "https://github.com/M1778/infinity-iac/blob/master/recipes/zabbix/recipe.yaml"
+    }
+  ]
+}

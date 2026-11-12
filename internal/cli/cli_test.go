@@ -101,8 +101,35 @@ func TestRecipeListUsesBuiltInCatalog(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &result); err != nil {
 		t.Fatal(err)
 	}
-	if len(result.Recipes) != 1 || result.Recipes[0].Name != "n8n" {
-		t.Fatalf("unexpected recipe list: %s", out)
+	if len(result.Recipes) < 100 {
+		t.Fatalf("unexpected recipe list count: %d", len(result.Recipes))
+	}
+}
+
+func TestEveryBuiltInRecipeRendersCloudInit(t *testing.T) {
+	t.Setenv("INFINITY_IAC_CONFIG", filepath.Join(t.TempDir(), "config.json"))
+	items, source, err := loadRecipes("")
+	if err != nil {
+		t.Fatalf("load built-in catalog (%s): %v", source, err)
+	}
+	if len(items) < 100 {
+		t.Fatalf("catalog has %d recipes; want at least 100", len(items))
+	}
+	for _, item := range items {
+		port := recipePort(item)
+		var err error
+		if item.Execution == "local" {
+			_, err = recipe.RenderLocalScript(item, recipe.RenderOptions{})
+		} else {
+			_, err = recipeCloudInit(item, port)
+		}
+		if item.Status == "template" {
+			if err == nil {
+				t.Errorf("template %s must fail before deployment", item.Name)
+			}
+		} else if err != nil {
+			t.Errorf("render %s: %v", item.Name, err)
+		}
 	}
 }
 
@@ -176,7 +203,7 @@ func TestRecipeCloudInitUsesPortAndRejectsMissingUpload(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(data, "-p 1080:5678") || !strings.Contains(data, "127.0.0.1:1080/") || !strings.Contains(data, "apt-get install") || !strings.Contains(data, "curl --fail") {
+	if !strings.Contains(data, "-p 127.0.0.1:1080:5678") || !strings.Contains(data, "127.0.0.1:1080/") || !strings.Contains(data, "install -y --") || !strings.Contains(data, "curl --fail") {
 		t.Fatalf("unexpected cloud-init: %s", data)
 	}
 	cpu, ram, storage := recipeResources(r)
@@ -210,5 +237,50 @@ func TestReleaseBaseNormalizesVersion(t *testing.T) {
 	}
 	if _, err := releaseBase("owner/bad/repo", "latest"); err == nil {
 		t.Fatal("expected invalid repository error")
+	}
+}
+
+func TestRecipeAliasAndRenderWithoutCloudAccess(t *testing.T) {
+	t.Setenv("INFINITY_IAC_CONFIG", filepath.Join(t.TempDir(), "config.json"))
+	_, stderr, code := call(t, "run", "--recipe", "nginx")
+	if code == 0 || !strings.Contains(stderr, "no access profile") {
+		t.Fatalf("recipe alias must reach provider validation: %d %s", code, stderr)
+	}
+	out, stderr, code := call(t, "recipe", "render", "--name", "nginx", "--port", "1080")
+	if code != 0 || !strings.HasPrefix(out, "#!/bin/bash\n") || !strings.Contains(out, "1080:80") {
+		t.Fatalf("render failed without credentials: %d %s %s", code, stderr, out)
+	}
+}
+
+func TestRunRejectsConflictingSelectorsAndTemplates(t *testing.T) {
+	t.Setenv("INFINITY_IAC_CONFIG", filepath.Join(t.TempDir(), "config.json"))
+	for _, args := range [][]string{
+		{"run", "--app", "nginx", "--recipe", "nginx"},
+		{"run", "--app", "nginx", "unexpected"},
+	} {
+		_, stderr, code := call(t, args...)
+		if code == 0 || !strings.Contains(stderr, "exactly one") {
+			t.Fatalf("ambiguous run accepted: %v: %d %s", args, code, stderr)
+		}
+	}
+	_, stderr, code := call(t, "run", "--recipe", "argocd", "--yes")
+	if code == 0 || !strings.Contains(stderr, "incomplete template") {
+		t.Fatalf("template must fail before provider access: %d %s", code, stderr)
+	}
+}
+
+func TestRecipeRenderSelectionAndPortValidation(t *testing.T) {
+	t.Setenv("INFINITY_IAC_CONFIG", filepath.Join(t.TempDir(), "config.json"))
+	_, stderr, code := call(t, "recipe", "render", "--name", "nginx", "--file", "ignored")
+	if code == 0 || !strings.Contains(stderr, "exactly one") {
+		t.Fatalf("ambiguous render accepted: %d %s", code, stderr)
+	}
+	_, stderr, code = call(t, "recipe", "render", "--name", "nginx", "--port", "65536")
+	if code == 0 || !strings.Contains(stderr, "port") {
+		t.Fatalf("invalid render port accepted: %d %s", code, stderr)
+	}
+	out, stderr, code := call(t, "recipe", "render", "--name", "system-report")
+	if code != 0 || !strings.Contains(out, "uname -a") || strings.Contains(out, "http://127.0.0.1:0") {
+		t.Fatalf("portless script failed: %d %s %s", code, stderr, out)
 	}
 }

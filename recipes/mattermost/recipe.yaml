@@ -1,0 +1,82 @@
+{
+  "api_version": "recipe/v1",
+  "version": "1.1.0",
+  "kind": "application",
+  "supports": {
+    "providers": [
+      "oracle"
+    ],
+    "os": [
+      "ubuntu-24.04",
+      "ubuntu-22.04"
+    ],
+    "architectures": [
+      "amd64"
+    ]
+  },
+  "name": "mattermost",
+  "description": "Team collaboration messaging.",
+  "inputs": {
+    "port": {
+      "type": "integer",
+      "description": "Loopback host port; connect through an SSH tunnel or an authenticated reverse proxy.",
+      "default": 8065,
+      "min": 1,
+      "max": 65535
+    }
+  },
+  "resources": {
+    "specs": "auto",
+    "cpu": 2,
+    "ram_gb": 4,
+    "storage_gb": 30,
+    "ingress": [
+      {
+        "port": 8065,
+        "protocol": "tcp",
+        "source": "loopback"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "install-docker",
+      "type": "package",
+      "package": "docker.io"
+    },
+    {
+      "id": "install-openssl",
+      "type": "package",
+      "package": "openssl"
+    },
+    {
+      "id": "start-mattermost-stack",
+      "type": "command",
+      "command": "recipe='mattermost'\nowned_volume() {\n  if docker volume inspect \"$1\" >/dev/null 2>&1; then\n    owner=$(docker volume inspect -f '{{ index .Labels \"infinity-iac-recipe\" }}' \"$1\")\n    [ \"$owner\" = \"$recipe\" ] || { printf '%s\\n' 'Refusing unowned volume' >&2; exit 1; }\n  else\n    docker volume create --label \"infinity-iac-recipe=$recipe\" \"$1\" >/dev/null\n  fi\n}\nowned_network() {\n  if docker network inspect \"$1\" >/dev/null 2>&1; then\n    owner=$(docker network inspect -f '{{ index .Labels \"infinity-iac-recipe\" }}' \"$1\")\n    [ \"$owner\" = \"$recipe\" ] || { printf '%s\\n' 'Refusing unowned network' >&2; exit 1; }\n  else\n    docker network create --label \"infinity-iac-recipe=$recipe\" \"$1\" >/dev/null\n  fi\n}\nreplace_container() {\n  if docker inspect \"$1\" >/dev/null 2>&1; then\n    owner=$(docker inspect -f '{{ index .Config.Labels \"infinity-iac-recipe\" }}' \"$1\")\n    [ \"$owner\" = \"$recipe\" ] || { printf '%s\\n' 'Refusing unowned container' >&2; exit 1; }\n    docker rm -f \"$1\" >/dev/null\n  fi\n}\nwait_for() {\n  local deadline=$((SECONDS + 180))\n  until \"$@\" >/dev/null 2>&1; do\n    (( SECONDS < deadline )) || { printf '%s\\n' 'Dependency readiness timed out' >&2; exit 1; }\n    sleep 3\n  done\n}\nowned_network infinity-mattermost-network\nowned_volume infinity-mattermost-database\nowned_volume infinity-mattermost-config\nowned_volume infinity-mattermost-data\nowned_volume infinity-mattermost-logs\nowned_volume infinity-mattermost-plugins\nowned_volume infinity-mattermost-client-plugins\ninstall -d -m 0700 /var/lib/infinity-iac/mattermost\ncredentials=/var/lib/infinity-iac/mattermost/credentials.env\ntest ! -L \"$credentials\"\nif [ ! -e \"$credentials\" ]; then\n  umask 077\n  tmp=$(mktemp \"${credentials}.XXXXXX\")\n  trap 'rm -f -- \"$tmp\"' EXIT\n  printf '%s=%s\\n' 'POSTGRES_USER' \"infinity\" >> \"$tmp\"\n  printf '%s=%s\\n' 'POSTGRES_DB' \"infinity\" >> \"$tmp\"\n  printf '%s=%s\\n' 'POSTGRES_PASSWORD' \"$(openssl rand -hex 32)\" >> \"$tmp\"\n  chmod 0600 \"$tmp\"\n  mv -- \"$tmp\" \"$credentials\"\n  trap - EXIT\nfi\nchmod 0600 \"$credentials\"\nset -a\n. \"$credentials\"\nset +a\nreplace_container mattermost\nreplace_container infinity-mattermost-db\ndocker run -d --restart unless-stopped --label infinity-iac-recipe=mattermost --name infinity-mattermost-db --network infinity-mattermost-network -v infinity-mattermost-database:/var/lib/postgresql/data --env-file \"$credentials\" postgres:16-alpine\nwait_for docker exec infinity-mattermost-db sh -ec 'PGPASSWORD=\"$POSTGRES_PASSWORD\" psql -h 127.0.0.1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -Atqc \"SELECT 1\"'\ndocker run -d --restart unless-stopped --label infinity-iac-recipe=mattermost --name mattermost --network infinity-mattermost-network -v infinity-mattermost-config:/mattermost/config -v infinity-mattermost-data:/mattermost/data -v infinity-mattermost-logs:/mattermost/logs -v infinity-mattermost-plugins:/mattermost/plugins -v infinity-mattermost-client-plugins:/mattermost/client/plugins -e MM_SQLSETTINGS_DRIVERNAME=\"postgres\" -e MM_SQLSETTINGS_DATASOURCE=\"postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@infinity-mattermost-db:5432/$POSTGRES_DB?sslmode=disable&connect_timeout=10\" -e MM_SERVICESETTINGS_SITEURL=\"http://localhost:{{port}}\" -p 127.0.0.1:{{port}}:8065 mattermost/mattermost-team-edition@sha256:0e435f3397390c36797d0c09b6fcfd73841ebf89bb292d6c6e109082a21ad7b6\n",
+      "timeout_seconds": 1500
+    }
+  ],
+  "health": [
+    {
+      "type": "http",
+      "port": 8065,
+      "path": "/api/v4/system/ping",
+      "timeout_seconds": 300
+    }
+  ],
+  "outputs": {
+    "url": {
+      "type": "string",
+      "value": "http://127.0.0.1:{{port}}"
+    },
+    "credentials_file": {
+      "type": "string",
+      "value": "/var/lib/infinity-iac/mattermost/credentials.env",
+      "sensitive": true
+    }
+  },
+  "status": "experimental",
+  "requirements": [
+    "Complete first-user/team onboarding. Private PostgreSQL and all stateful Mattermost paths persist; configure TLS/email and disable unintended public signups before publication."
+  ]
+}

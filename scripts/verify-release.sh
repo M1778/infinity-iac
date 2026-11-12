@@ -38,4 +38,18 @@ for asset in $required; do
   [ "$actual" = "$expected" ] || die "checksum mismatch: $asset"
 done
 
+version=${2:-}
+if [ -n "$version" ]; then
+  case $(uname -s)/$(uname -m) in
+    Linux/x86_64|Linux/amd64) binary=$dist/infinity-iac_linux_amd64 ;;
+    Linux/aarch64|Linux/arm64) binary=$dist/infinity-iac_linux_arm64 ;;
+    Darwin/x86_64|Darwin/amd64) binary=$dist/infinity-iac_darwin_amd64 ;;
+    Darwin/arm64|Darwin/aarch64) binary=$dist/infinity-iac_darwin_arm64 ;;
+    *) die "cannot verify a native binary version on this platform" ;;
+  esac
+  [ -x "$binary" ] || die "native binary is not executable: $binary"
+  reported=$("$binary" --version) || die "native binary failed to report its version"
+  [ "$reported" = "$version" ] || die "binary reports $reported; expected $version"
+fi
+
 printf 'release artifacts verified in %s\n' "$dist"

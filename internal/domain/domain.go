@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -16,6 +17,8 @@ const (
 	StatusDeleted      = "deleted"
 	StatusProvisioning = "provisioning"
 )
+
+var validServerName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,254}$`)
 
 type AccessProfile struct {
 	Name               string    `json:"name"`
@@ -44,6 +47,7 @@ type ServerSpec struct {
 	Region           string `json:"region,omitempty" yaml:"region,omitempty"`
 	NetworkingScript string `json:"networking_script,omitempty" yaml:"networking_script,omitempty"`
 	StartupScript    string `json:"startup_script,omitempty" yaml:"startup_script,omitempty"`
+	UserData         string `json:"user_data,omitempty" yaml:"user_data,omitempty"`
 	Port             int    `json:"port,omitempty" yaml:"port,omitempty"`
 }
 
@@ -73,8 +77,11 @@ func (s ServerSpec) ResolveDefaults(defaultProvider, defaultAccess, defaultRegio
 }
 
 func (s ServerSpec) Validate() error {
-	if s.Name == "" {
-		return errors.New("server name is required")
+	if !validServerName.MatchString(s.Name) {
+		return errors.New("server name must start with a letter or digit and contain at most 255 letters, digits, dots, underscores, or hyphens")
+	}
+	if s.Port < 0 || s.Port > 65535 {
+		return errors.New("server port must be between 0 and 65535")
 	}
 	if strings.TrimSpace(s.OS) == "" {
 		return errors.New("os is required")
@@ -148,17 +155,36 @@ func NewPlan(manifest Manifest, existing []Instance, now time.Time) (Plan, error
 	if manifest.APIVersion == "" {
 		manifest.APIVersion = "v1"
 	}
+	if manifest.APIVersion != "v1" {
+		return Plan{}, errors.New("manifest api_version must be v1")
+	}
+	key := func(name, access, region, provider string) string {
+		if provider == "oci" {
+			provider = "oracle"
+		}
+		return strings.Join([]string{name, access, region, provider}, "\x00")
+	}
 	existingByName := make(map[string]Instance, len(existing))
 	for _, in := range existing {
-		existingByName[in.Name] = in
+		identity := key(in.Name, in.Access, in.Region, in.Provider)
+		if _, exists := existingByName[identity]; exists {
+			return Plan{}, fmt.Errorf("existing instance name %q is ambiguous within its profile", in.Name)
+		}
+		existingByName[identity] = in
 	}
+	seen := make(map[string]bool, len(manifest.Servers))
 	p := Plan{APIVersion: manifest.APIVersion, ID: fmt.Sprintf("plan-%d", now.UnixNano()), CreatedAt: now}
 	for i := range manifest.Servers {
 		s := manifest.Servers[i].ResolveDefaults(manifest.Servers[i].Provider, manifest.Servers[i].Access, manifest.Servers[i].Region)
 		if err := s.Validate(); err != nil {
 			return Plan{}, fmt.Errorf("servers[%d]: %w", i, err)
 		}
-		if old, ok := existingByName[s.Name]; ok {
+		identity := key(s.Name, s.Access, s.Region, s.Provider)
+		if seen[identity] {
+			return Plan{}, fmt.Errorf("duplicate server %q in manifest", s.Name)
+		}
+		seen[identity] = true
+		if old, ok := existingByName[identity]; ok {
 			if old.Status == StatusDeleted {
 				p.Actions = append(p.Actions, Action{ID: fmt.Sprintf("create-%s", s.Name), Type: "create", Resource: s.Name, Spec: &s, Reason: "deleted resource will be recreated"})
 			}

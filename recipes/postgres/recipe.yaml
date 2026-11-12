@@ -1,0 +1,75 @@
+{
+  "api_version": "recipe/v1",
+  "version": "1.1.0",
+  "kind": "application",
+  "supports": {
+    "providers": [
+      "oracle"
+    ],
+    "os": [
+      "ubuntu-24.04",
+      "ubuntu-22.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "name": "postgres",
+  "description": "PostgreSQL relational database.",
+  "inputs": {
+    "port": {
+      "type": "integer",
+      "description": "Loopback host port; use an SSH tunnel or an authenticated reverse proxy.",
+      "default": 5432,
+      "min": 1,
+      "max": 65535
+    }
+  },
+  "resources": {
+    "specs": "ibase2",
+    "cpu": 2,
+    "ram_gb": 2,
+    "storage_gb": 30,
+    "ingress": [
+      {
+        "port": 5432,
+        "protocol": "tcp",
+        "source": "loopback"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "install-docker",
+      "type": "package",
+      "package": "docker.io"
+    },
+    {
+      "id": "install-openssl",
+      "type": "package",
+      "package": "openssl"
+    },
+    {
+      "id": "start-postgres",
+      "type": "command",
+      "command": "umask 077\ninstall -d -m 0700 /var/lib/infinity-iac/postgres\nif [ ! -s /var/lib/infinity-iac/postgres/credentials.env ]; then\n  printf 'POSTGRES_USER=infinity\\nPOSTGRES_DB=infinity\\nPOSTGRES_PASSWORD=%s\\n' \"$(openssl rand -hex 24)\" > /var/lib/infinity-iac/postgres/credentials.env.tmp\n  mv /var/lib/infinity-iac/postgres/credentials.env.tmp /var/lib/infinity-iac/postgres/credentials.env\nfi\nchmod 0600 /var/lib/infinity-iac/postgres/credentials.env\nif docker volume inspect infinity-postgres-data >/dev/null 2>&1; then\n  owner=$(docker volume inspect -f '{{ index .Labels \"infinity-iac-recipe\" }}' infinity-postgres-data)\n  [ \"$owner\" = postgres ] || { echo \"Refusing unowned volume\" >&2; exit 1; }\nelse\n  docker volume create --label infinity-iac-recipe=postgres infinity-postgres-data >/dev/null\nfi\nif docker inspect postgres >/dev/null 2>&1; then\n  owner=$(docker inspect -f '{{ index .Config.Labels \"infinity-iac-recipe\" }}' postgres)\n  [ \"$owner\" = postgres ] || { echo \"Refusing unowned container\" >&2; exit 1; }\n  docker rm -f postgres >/dev/null\nfi\ndocker run -d --restart unless-stopped --label infinity-iac-recipe=postgres --env-file /var/lib/infinity-iac/postgres/credentials.env -v infinity-postgres-data:/var/lib/postgresql/data --name postgres -p 127.0.0.1:{{port}}:5432 postgres:16-alpine",
+      "timeout_seconds": 900
+    }
+  ],
+  "health": [
+    {
+      "type": "command",
+      "command": "docker exec postgres sh -c 'PGPASSWORD=\"$POSTGRES_PASSWORD\" psql -h 127.0.0.1 -U infinity -d infinity -Atqc \"SELECT 1\"' | grep -qx 1",
+      "timeout_seconds": 180
+    }
+  ],
+  "outputs": {
+    "credentials_file": {
+      "type": "string",
+      "value": "/var/lib/infinity-iac/postgres/credentials.env",
+      "sensitive": true
+    }
+  },
+  "status": "experimental"
+}

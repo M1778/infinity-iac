@@ -1,0 +1,74 @@
+{
+  "api_version": "recipe/v1",
+  "version": "1.1.0",
+  "kind": "application",
+  "supports": {
+    "providers": [
+      "oracle"
+    ],
+    "os": [
+      "ubuntu-24.04",
+      "ubuntu-22.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "name": "stirling-pdf",
+  "description": "PDF toolkit.",
+  "inputs": {
+    "port": {
+      "type": "integer",
+      "description": "Loopback host port; connect through an SSH tunnel or an authenticated reverse proxy.",
+      "default": 8080,
+      "min": 1,
+      "max": 65535
+    }
+  },
+  "resources": {
+    "specs": "auto",
+    "cpu": 2,
+    "ram_gb": 3,
+    "storage_gb": 30,
+    "ingress": [
+      {
+        "port": 8080,
+        "protocol": "tcp",
+        "source": "loopback"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "id": "install-docker",
+      "type": "package",
+      "package": "docker.io"
+    },
+    {
+      "id": "start-stirling-pdf",
+      "type": "command",
+      "command": "recipe='stirling-pdf'\nowned_volume() {\n  if docker volume inspect \"$1\" >/dev/null 2>&1; then\n    owner=$(docker volume inspect -f '{{ index .Labels \"infinity-iac-recipe\" }}' \"$1\")\n    [ \"$owner\" = \"$recipe\" ] || { printf '%s\\n' 'Refusing unowned volume' >&2; exit 1; }\n  else\n    docker volume create --label \"infinity-iac-recipe=$recipe\" \"$1\" >/dev/null\n  fi\n}\nreplace_container() {\n  if docker inspect \"$1\" >/dev/null 2>&1; then\n    owner=$(docker inspect -f '{{ index .Config.Labels \"infinity-iac-recipe\" }}' \"$1\")\n    [ \"$owner\" = \"$recipe\" ] || { printf '%s\\n' 'Refusing unowned container' >&2; exit 1; }\n    docker rm -f \"$1\" >/dev/null\n  fi\n}\nowned_volume 'infinity-stirling-pdf-config'\nowned_volume 'infinity-stirling-pdf-tessdata'\nreplace_container stirling-pdf\ndocker run -d --restart unless-stopped --label infinity-iac-recipe=stirling-pdf --name stirling-pdf -v infinity-stirling-pdf-config:/configs -v infinity-stirling-pdf-tessdata:/usr/share/tessdata -e DISABLE_ADDITIONAL_FEATURES=\"true\" -p 127.0.0.1:{{port}}:8080 stirlingtools/stirling-pdf:latest\n",
+      "timeout_seconds": 1200
+    }
+  ],
+  "health": [
+    {
+      "type": "http",
+      "port": 8080,
+      "path": "/",
+      "timeout_seconds": 240
+    }
+  ],
+  "outputs": {
+    "url": {
+      "type": "string",
+      "value": "http://127.0.0.1:{{port}}"
+    }
+  },
+  "status": "experimental",
+  "requirements": [
+    "Loopback-only evaluation. Complete application setup and authentication before exposing it through a TLS proxy.",
+    "Persistent named volumes start empty; configure the intended libraries, backups, or upstream services explicitly."
+  ]
+}
