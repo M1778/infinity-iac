@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -80,9 +81,15 @@ func TestHunterCapacityRotationAndPersistedSuccess(t *testing.T) {
 	if state.Pending || state.InstanceID != item.ID || state.Tokens["AD-1"] == state.Tokens["AD-2"] {
 		t.Fatal("journal lost the confirmed distinct operation identities")
 	}
-	info, _ := os.Stat(options.StateFile)
-	if info.Mode().Perm() != 0o600 {
-		t.Fatal("journal is not private")
+	info, err := os.Stat(options.StateFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !info.Mode().IsRegular() {
+		t.Fatal("journal is not a regular file")
+	}
+	if runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
+		t.Fatalf("journal permissions are %o, want 600", info.Mode().Perm())
 	}
 	base.items = []domain.Instance{item}
 	_, err = runHunter(context.Background(), options, factory, pause, io.Discard)

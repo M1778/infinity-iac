@@ -158,6 +158,42 @@ jobs:
           & $iscc "/DAppVersion=$version" "/DSourceBinary=$((Resolve-Path 'dist/infinity-iac_windows_amd64.exe').Path)" installer/infinity-iac.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      - name: Test Windows installation and uninstallation
+        shell: pwsh
+        run: |
+          $version = ${env:GITHUB_REF_NAME}.TrimStart('v')
+          $installDir = Join-Path $env:RUNNER_TEMP "infinity-iac-install-$([guid]::NewGuid())"
+          $originalPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+          $originalConfig = $env:INFINITY_IAC_CONFIG
+          $env:INFINITY_IAC_CONFIG = Join-Path $installDir 'smoke-config.json'
+          try {
+            $setup = Start-Process -FilePath (Resolve-Path 'dist/infinity-iac-setup.exe').Path -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/NOICONS', '/TASKS=addtopath', "/DIR=`"$installDir`"") -Wait -PassThru
+            if ($setup.ExitCode -ne 0) { throw "Windows installer failed with exit code $($setup.ExitCode)" }
+            $installedPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+            if ($installedPath.Split(';') -notcontains $installDir) { throw 'Installer did not add the requested user PATH entry' }
+            $binary = Join-Path $installDir 'infinity-iac.exe'
+            $reported = & $binary --version
+            if ($LASTEXITCODE -ne 0 -or $reported.Trim() -ne $version) { throw 'Installed Windows version does not match release tag' }
+            $catalog = & $binary list recipes --output json
+            if ($LASTEXITCODE -ne 0) { throw 'Installed Windows catalog failed' }
+            $items = ($catalog | ConvertFrom-Json).recipes
+            if (@($items).Count -ne 137) { throw 'Installed Windows catalog is incomplete' }
+            $rendered = & $binary recipe render --name oc-hunter
+            if ($LASTEXITCODE -ne 0 -or -not ($rendered -match 'oc-hunter')) { throw 'Installed Windows local recipe rendering failed' }
+          } finally {
+            $uninstaller = Join-Path $installDir 'unins000.exe'
+            try {
+              if (Test-Path -LiteralPath $uninstaller) {
+                $uninstall = Start-Process -FilePath $uninstaller -ArgumentList @('/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART') -Wait -PassThru
+                if ($uninstall.ExitCode -ne 0) { throw "Windows uninstaller failed with exit code $($uninstall.ExitCode)" }
+              }
+              if (Test-Path -LiteralPath (Join-Path $installDir 'infinity-iac.exe')) { throw 'Windows uninstall left the installed binary behind' }
+              if ([Environment]::GetEnvironmentVariable('Path', 'User') -cne $originalPath) { throw 'Windows uninstall did not restore the user PATH' }
+            } finally {
+              $env:INFINITY_IAC_CONFIG = $originalConfig
+            }
+          }
+
       - name: Upload Windows installer
         uses: actions/upload-artifact@v7
         with:
