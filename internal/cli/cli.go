@@ -36,7 +36,7 @@ type App struct {
 	n          provider.NetworkProvider
 }
 
-var Version = "1.1.0"
+var Version = "1.1.1"
 
 func Run(args []string) int { return RunWithIO(args, os.Stdin, os.Stdout, os.Stderr) }
 func RunWithIO(args []string, in io.Reader, out, errOut io.Writer) int {
