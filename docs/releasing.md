@@ -21,8 +21,11 @@ git diff --check
 
 The source/default `internal/cli.Version` must match the tag without its `v`.
 Release jobs check source version, test/vet, inject the tag version into every
-binary, and verify native Linux and Windows reports. Formatting includes the
-public root package, not just internal directories.
+binary, and verify native Linux and Windows reports. The Windows PR and release
+jobs run the same clean-runner installer smoke, checking PATH opt-in/out,
+pre-existing entries, exact empty-segment preservation, offline CLI behavior,
+and uninstallation. Formatting includes the public root package, not just
+internal directories.
 
 Review the final diff for secrets. Do not commit OCI config, private keys,
 application input secrets, raw live logs, cloud journals, local harness settings,
@@ -54,14 +57,14 @@ lifecycle as tested. Verify cleanup and preserve private evidence.
 3. Merge through protection and wait for master CI and Pages validation.
 4. Create a new semver tag on the exact verified merge commit, then push it.
 
-For the 1.1.0 source, after the merge is verified:
+For the 1.1.1 source, after the merge is verified:
 
 ```sh
-git tag v1.1.0 VERIFIED_MERGE_COMMIT
-git push origin v1.1.0
+git tag v1.1.1 VERIFIED_MERGE_COMMIT
+git push origin v1.1.1
 gh run list --workflow release.yml --limit 5
 gh run watch RUN_ID --exit-status
-gh release view v1.1.0
+gh release view v1.1.1
 ```
 
 Build/package jobs have read-only repository access; publication alone receives
@@ -89,13 +92,13 @@ tag assets, run checksum verification, and test a clean temporary install prefix
 
 ```sh
 tmp_prefix="$(mktemp -d)"
-sh install.sh --version v1.1.0 --prefix "$tmp_prefix"
+sh install.sh --version v1.1.1 --prefix "$tmp_prefix"
 "$tmp_prefix/infinity-iac" --version
 "$tmp_prefix/infinity-iac" list recipes --output json
 "$tmp_prefix/infinity-iac" recipe render --name oc-hunter
 ```
 
-Expected version is `1.1.0`, with the documented embedded inventory and commands.
+Expected version is `1.1.1`, with the documented embedded inventory and commands.
 Do not replace a working system-wide executable until fresh installation passes.
 Windows installation/uninstallation additionally needs a clean user-profile
 check; successful cross-compilation or Inno packaging is not that check.

@@ -63,6 +63,30 @@ jobs:
         shell: bash
         run: sh -n scripts/verify-release.sh
 
+      - name: Install Inno Setup
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: choco install innosetup --no-progress --yes
+
+      - name: Build Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $version = go run ./cmd/infinity-iac --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) { $iscc = 'iscc.exe' }
+          & $iscc "/DAppVersion=$($version.Trim())" "/DSourceBinary=$((Resolve-Path 'dist/infinity-iac-Windows-X64.exe').Path)" installer/infinity-iac.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Test Windows installation and uninstallation
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $version = go run ./cmd/infinity-iac --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./scripts/windows-installer-smoke.ps1 -Installer dist/infinity-iac-setup.exe -Version $version.Trim()
+
       - name: Upload CI binary
         uses: actions/upload-artifact@v7
         with:

@@ -41,9 +41,12 @@ Name: "addtopath"; Description: "Add Infinity-IaC to your user PATH"; Flags: unc
 
 [Registry]
 Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{code:GetUpdatedPath}"; Flags: preservestringtype; Check: WizardIsTaskSelected('addtopath')
-Root: HKCU; Subkey: "Software\Infinity-IaC"; ValueType: dword; ValueName: "PathManaged"; ValueData: "1"; Flags: uninsdeletekey; Check: WizardIsTaskSelected('addtopath')
+Root: HKCU; Subkey: "Software\Infinity-IaC"; ValueType: dword; ValueName: "PathManaged"; ValueData: "1"; Flags: uninsdeletekey; Check: PathWasAdded
 
 [Code]
+var
+  PathAdded: Boolean;
+
 function PathContains(const PathValue, Entry: string): Boolean;
 begin
   Result := Pos(';' + Lowercase(Entry) + ';', ';' + Lowercase(PathValue) + ';') > 0;
@@ -59,37 +62,47 @@ begin
     if PathContains(CurrentPath, InstallPath) then
       Result := CurrentPath
     else
+    begin
       Result := CurrentPath + ';' + InstallPath;
+      PathAdded := True;
+    end;
   end
   else
+  begin
     Result := InstallPath;
+    PathAdded := True;
+  end;
+end;
+
+function PathWasAdded: Boolean;
+begin
+  Result := PathAdded;
 end;
 
 function RemovePathEntry(const PathValue, Entry: String): String;
 var
   Parts, Part: String;
   I: Integer;
+  First: Boolean;
 begin
   Result := '';
   Parts := PathValue;
-  while Parts <> '' do
+  First := True;
+  while True do
   begin
     I := Pos(';', Parts);
     if I = 0 then
-    begin
-      Part := Parts;
-      Parts := '';
-    end
+      Part := Parts
     else
-    begin
       Part := Copy(Parts, 1, I - 1);
-      Delete(Parts, 1, I);
-    end;
-    if (Part <> '') and (CompareText(Part, Entry) <> 0) then
+    if CompareText(Part, Entry) <> 0 then
     begin
-      if Result <> '' then Result := Result + ';';
+      if not First then Result := Result + ';';
       Result := Result + Part;
+      First := False;
     end;
+    if I = 0 then Break;
+    Delete(Parts, 1, I);
   end;
 end;
 

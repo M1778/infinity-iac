@@ -6,7 +6,7 @@ recipes to cloud-init, and provides hash-bound plans and a local capacity helper
 
 ## Version and scope
 
-The source targets **1.1.0**. Installers download published GitHub Release assets,
+The source targets **1.1.1**. Installers download published GitHub Release assets,
 not the current checkout. Check the release page before selecting a tag; use an
 explicit source-built binary for changes not yet released.
 
@@ -33,7 +33,7 @@ sh install.sh --prefix "$HOME/.local/bin"
 "$HOME/.local/bin/infinity-iac" --version
 ```
 
-Use `--version v1.1.0` only after that tag is published. The corresponding
+Use `--version v1.1.1` only after that release is published. The corresponding
 environment settings are `INFINITY_IAC_VERSION`, `INFINITY_IAC_PREFIX`, and
 `INFINITY_IAC_REPOSITORY`.
 

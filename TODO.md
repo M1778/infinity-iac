@@ -59,9 +59,11 @@
 
 ## Distribution closure
 
-- [ ] Publish the tested 1.1.0 source through a PR and all protected CI checks.
-- [ ] Verify post-merge Pages deployment and the real published site.
-- [ ] Publish `v1.1.0` and verify all release assets and a fresh installation.
+- [x] Merge the 1.1.0 source through PR #22 and all protected CI checks.
+- [x] Verify post-merge Pages deployment and the real published site.
+- [ ] Publish `v1.1.1` with exact Windows PATH restoration and verify all release
+  assets and a fresh installation. The immutable `v1.1.0` tag's installer gate
+  failed; it did not publish release assets.
 
 These items are changed to complete only after the corresponding GitHub runs,
 release assets, and installer checks actually succeed. Source merges do not
